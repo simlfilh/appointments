@@ -28,7 +28,7 @@ def get_all_appointments():
     """Получает все записи"""
     try:
         supabase = get_supabase()
-        response = supabase.table('appointments').select('*').order('date', asc=True).order('time', asc=True).execute()
+        response = supabase.table('appointments').select('*').order('date', desc=False).order('time', desc=False).execute()
         if response.data:
             return pd.DataFrame(response.data)
         return pd.DataFrame()
