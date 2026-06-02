@@ -21,10 +21,16 @@ DORMITORIES = [
     "Общежитие №7 | ул. Воронежская, д. 38"
 ]
 
-# Доступное время для записи (по умолчанию)
-DEFAULT_TIME_SLOTS = [
-    "10:00", "11:00", "12:00", "13:00", "14:00", "15:00", "16:00", "17:00"
-]
+# Расписание по дням недели (длительность приема 10 минут)
+SCHEDULE = {
+    "Monday": {"start": "14:00", "end": "16:30", "slot_minutes": 10},
+    "Tuesday": {"start": "14:00", "end": "16:30", "slot_minutes": 10},
+    "Wednesday": {"start": None, "end": None, "slot_minutes": 10},  # Среда - выходной
+    "Thursday": {"start": "14:00", "end": "16:30", "slot_minutes": 10},
+    "Friday": {"start": "13:00", "end": "15:00", "slot_minutes": 10},
+    "Saturday": {"start": None, "end": None, "slot_minutes": 10},  # Суббота - выходной
+    "Sunday": {"start": None, "end": None, "slot_minutes": 10}  # Воскресенье - выходной
+}
 
 WORKER_EMAILS = [
     "valeraforumsch@gmail.com"
@@ -34,35 +40,43 @@ WORKER_EMAILS = [
 def get_supabase():
     return create_client(SUPABASE_URL, SUPABASE_KEY)
 
-def get_time_slots():
-    """Получает доступное время из настроек"""
-    try:
-        supabase = get_supabase()
-        response = supabase.table('settings').select('value').eq('key', 'time_slots').execute()
-        if response.data:
-            return response.data[0]['value'].split(',')
-        return DEFAULT_TIME_SLOTS
-    except Exception:
-        return DEFAULT_TIME_SLOTS
-
-def get_appointments_by_date(date):
-    """Получает все записи на конкретную дату"""
-    try:
-        supabase = get_supabase()
-        response = supabase.table('appointments').select('*').eq('date', date).order('time', asc=True).execute()
-        if response.data:
-            return response.data
+def generate_time_slots_for_day(date):
+    """Генерирует временные слоты для конкретной даты"""
+    day_name = date.strftime("%A")
+    day_schedule = SCHEDULE.get(day_name)
+    
+    if not day_schedule or day_schedule["start"] is None:
         return []
-    except Exception as e:
-        print(f"Ошибка: {e}")
+    
+    start_time = datetime.strptime(day_schedule["start"], "%H:%M")
+    end_time = datetime.strptime(day_schedule["end"], "%H:%M")
+    slot_minutes = day_schedule["slot_minutes"]
+    
+    slots = []
+    current = start_time
+    while current < end_time:
+        slots.append(current.strftime("%H:%M"))
+        current += timedelta(minutes=slot_minutes)
+    
+    return slots
+
+def get_booked_slots_for_date(date):
+    """Получает уже забронированные слоты на дату"""
+    try:
+        supabase = get_supabase()
+        date_str = date.strftime("%Y-%m-%d")
+        response = supabase.table('appointments').select('time').eq('date', date_str).execute()
+        if response.data:
+            return [appt['time'] for appt in response.data]
+        return []
+    except Exception:
         return []
 
 def get_available_time_slots(date):
     """Возвращает доступные временные слоты на дату"""
-    booked = get_appointments_by_date(date)
-    booked_times = [b['time'] for b in booked]
-    time_slots = get_time_slots()
-    available = [slot for slot in time_slots if slot not in booked_times]
+    all_slots = generate_time_slots_for_day(date)
+    booked_slots = get_booked_slots_for_date(date)
+    available = [slot for slot in all_slots if slot not in booked_slots]
     return available
 
 def save_appointment(data):
@@ -87,7 +101,7 @@ def get_appointments_by_email(email):
     """Получает все записи пользователя по email"""
     try:
         supabase = get_supabase()
-        response = supabase.table('appointments').select('*').eq('email', email).order('date', desc=True).order('time', asc=True).execute()
+        response = supabase.table('appointments').select('*').eq('email', email).order('date', desc=False).order('time', desc=False).execute()
         if response.data:
             return response.data
         return []
@@ -105,7 +119,7 @@ def cancel_appointment(appointment_id, user_email):
             supabase.table('appointments').delete().eq('id', appointment_id).execute()
             return True, appointment
         return False, None
-    except Exception as e:
+    except Exception:
         return False, None
 
 # ===== EMAIL УВЕДОМЛЕНИЯ =====
@@ -201,6 +215,19 @@ def validate_email(email):
 def main():
     st.title("🏠 ЖБУ СПбГЭУ | Электронная запись на прием")
     
+    # Показываем расписание
+    with st.expander("📅 Режим работы ЖБУ", expanded=True):
+        st.markdown("""
+        **Время приема студентов:**
+        - **Понедельник:** 14:00 — 16:30 (перерыв каждые 10 минут)
+        - **Вторник:** 14:00 — 16:30 (перерыв каждые 10 минут)
+        - **Среда:** Выходной
+        - **Четверг:** 14:00 — 16:30 (перерыв каждые 10 минут)
+        - **Пятница:** 13:00 — 15:00 (перерыв каждые 10 минут)
+        - **Суббота:** Выходной
+        - **Воскресенье:** Выходной
+        """)
+    
     # Создаем вкладки
     tab1, tab2 = st.tabs(["📝 Записаться на прием", "🗑️ Мои записи"])
     
@@ -220,16 +247,24 @@ def main():
             # Выбор даты (только будущие даты)
             min_date = datetime.now().date() + timedelta(days=1)
             selected_date = st.date_input("Выберите дату приема *", min_value=min_date, value=min_date)
-            selected_date_str = selected_date.strftime("%Y-%m-%d")
             
-            # Получаем доступное время
-            available_slots = get_available_time_slots(selected_date_str)
+            # Проверяем, рабочий ли день
+            day_name = selected_date.strftime("%A")
+            day_schedule = SCHEDULE.get(day_name)
             
-            if not available_slots:
-                st.warning("⚠️ На выбранную дату нет свободного времени. Пожалуйста, выберите другую дату.")
+            if day_schedule and day_schedule["start"] is None:
+                st.error(f"❌ {selected_date.strftime('%A')} - выходной день. Выберите другой день.")
+                available_slots = []
                 selected_time = None
             else:
-                selected_time = st.selectbox("Выберите время *", available_slots)
+                # Получаем доступное время
+                available_slots = get_available_time_slots(selected_date)
+                
+                if not available_slots:
+                    st.warning(f"⚠️ На {selected_date.strftime('%d.%m.%Y')} нет свободного времени. Пожалуйста, выберите другую дату.")
+                    selected_time = None
+                else:
+                    selected_time = st.selectbox("Выберите время *", available_slots)
             
             type_map = {
                 "🔧 Вопрос по сантехнике": "Сантехника",
@@ -243,7 +278,6 @@ def main():
             
             description = st.text_area("Подробное описание вопроса *", height=150)
             
-            # Submit button - ОН ЗДЕСЬ!
             submitted = st.form_submit_button("📅 Записаться на прием")
             
             if submitted:
@@ -255,7 +289,7 @@ def main():
                     st.error("❌ На выбранную дату нет свободного времени")
                 else:
                     appointment_data = {
-                        "date": selected_date_str,
+                        "date": selected_date.strftime("%Y-%m-%d"),
                         "time": selected_time,
                         "fio": fio,
                         "email": email,
@@ -268,8 +302,8 @@ def main():
                         new_id = save_appointment(appointment_data)
                         
                         if new_id:
-                            send_confirmation_to_student(email, fio, new_id, selected_date_str, selected_time, dormitory, type_map[issue_type_display])
-                            send_notification_to_workers(fio, email, dormitory, room, selected_date_str, selected_time, type_map[issue_type_display], description, new_id)
+                            send_confirmation_to_student(email, fio, new_id, selected_date.strftime("%d.%m.%Y"), selected_time, dormitory, type_map[issue_type_display])
+                            send_notification_to_workers(fio, email, dormitory, room, selected_date.strftime("%d.%m.%Y"), selected_time, type_map[issue_type_display], description, new_id)
                             
                             st.success(f"✅ Запись №{new_id} успешно создана! Подтверждение придет на вашу почту.")
                             st.balloons()
