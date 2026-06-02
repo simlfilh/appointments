@@ -216,15 +216,12 @@ def validate_email(email):
     return re.match(pattern, email) is not None
 
 def get_next_available_date(target_day_code):
-    """Получает следующую доступную дату (включая сегодня, если время еще не прошло)"""
+    """Получает следующую доступную дату (включая сегодня)"""
     today = datetime.now().date()
     current_day = today.weekday()
-    current_time = datetime.now().time()
     
     # Если сегодня нужный день недели
     if target_day_code == current_day:
-        # Проверяем, есть ли еще слоты на сегодня (после текущего времени)
-        # Возвращаем сегодняшнюю дату, а фильтр времени сделаем позже
         return today
     
     # Иначе ищем следующий день
@@ -232,21 +229,6 @@ def get_next_available_date(target_day_code):
     if days_ahead == 0:
         days_ahead = 7
     return today + timedelta(days=days_ahead)
-
-def filter_past_time_slots(time_slots, selected_date):
-    """Фильтрует временные слоты, убирая уже прошедшие на сегодня"""
-    today = datetime.now().date()
-    current_time = datetime.now().time()
-    
-    if selected_date == today:
-        # Оставляем только слоты, которые еще не прошли (строго больше текущего времени)
-        available = []
-        for slot in time_slots:
-            slot_time = datetime.strptime(slot, "%H:%M").time()
-            if slot_time > current_time:
-                available.append(slot)
-        return available
-    return time_slots
 
 # ===== ОСНОВНОЕ ПРИЛОЖЕНИЕ =====
 def main():
@@ -271,8 +253,6 @@ def main():
         - **Пятница:** 13:00 — 14:50
         - **Суббота:** Выходной
         - **Воскресенье:** Выходной
-        
-        *Запись на текущий день возможна на свободное время, которое еще не наступило*
         """)
     
     # Создаем вкладки
@@ -299,107 +279,98 @@ def main():
             day_info = AVAILABLE_DAYS[st.session_state.selected_day]
             st.markdown(f"### Шаг 2: Выберите время на {day_info['display']}")
             
-            # Получаем следующую доступную дату (может быть сегодня)
+            # Получаем дату (может быть сегодня или следующая)
             selected_date = get_next_available_date(day_info["day_code"])
             selected_date_str = selected_date.strftime("%Y-%m-%d")
             selected_date_display = selected_date.strftime("%d.%m.%Y")
             
-            # Показываем, какая дата выбрана
+            # Показываем выбранную дату
             if selected_date == datetime.now().date():
                 st.info(f"📅 Вы выбрали: **{day_info['display']}** - СЕГОДНЯ ({selected_date_display})")
             else:
                 st.info(f"📅 Вы выбрали: **{day_info['display']}** - {selected_date_display}")
             
-            # Получаем все слоты для этого дня
-            all_time_slots = day_info["time_slots"]
+            # Получаем забронированные слоты
+            booked_slots = get_booked_slots_for_date(selected_date_str)
             
-            # Фильтруем прошедшее время, если выбрана сегодняшняя дата
-            available_time_slots = filter_past_time_slots(all_time_slots, selected_date)
+            # Показываем кнопки с временем (все слоты, без фильтрации по времени)
+            st.markdown("**Доступное время:**")
             
-            if not available_time_slots:
-                st.warning(f"⚠️ На {selected_date_display} нет доступного времени. Пожалуйста, выберите другой день.")
-            else:
-                # Получаем забронированные слоты
-                booked_slots = get_booked_slots_for_date(selected_date_str)
+            time_slots = day_info["time_slots"]
+            time_cols = st.columns(5)
+            for idx, time_slot in enumerate(time_slots):
+                col_idx = idx % 5
+                with time_cols[col_idx]:
+                    if time_slot in booked_slots:
+                        st.button(f"❌ {time_slot}", disabled=True, key=f"time_{day_key}_{time_slot}", use_container_width=True)
+                    else:
+                        if st.button(f"🟢 {time_slot}", key=f"time_{day_key}_{time_slot}", use_container_width=True):
+                            st.session_state.selected_time = time_slot
+                            st.session_state.show_form = True
+                            st.rerun()
+            
+            # Шаг 3: Форма для заполнения данных
+            if st.session_state.show_form and st.session_state.selected_time:
+                st.markdown(f"### Шаг 3: Заполните данные для записи на {st.session_state.selected_time}")
                 
-                # Показываем кнопки с временем
-                st.markdown("**Доступное время:**")
-                
-                # Создаем строки с кнопками времени (по 5 кнопок в строке)
-                time_cols = st.columns(5)
-                for idx, time_slot in enumerate(available_time_slots):
-                    col_idx = idx % 5
-                    with time_cols[col_idx]:
-                        if time_slot in booked_slots:
-                            st.button(f"❌ {time_slot}", disabled=True, key=f"time_{day_key}_{time_slot}", use_container_width=True)
-                        else:
-                            if st.button(f"🟢 {time_slot}", key=f"time_{day_key}_{time_slot}", use_container_width=True):
-                                st.session_state.selected_time = time_slot
-                                st.session_state.show_form = True
-                                st.rerun()
-                
-                # Шаг 3: Форма для заполнения данных
-                if st.session_state.show_form and st.session_state.selected_time:
-                    st.markdown(f"### Шаг 3: Заполните данные для записи на {st.session_state.selected_time}")
+                with st.form("appointment_form"):
+                    fio = st.text_input("Ваше ФИО *")
+                    email = st.text_input("Email для связи *", 
+                                          placeholder="example@mail.ru",
+                                          help="На этот email придет подтверждение записи")
                     
-                    with st.form("appointment_form"):
-                        fio = st.text_input("Ваше ФИО *")
-                        email = st.text_input("Email для связи *", 
-                                              placeholder="example@mail.ru",
-                                              help="На этот email придет подтверждение записи")
-                        
-                        dormitory = st.selectbox("Выберите общежитие *", DORMITORIES)
-                        room = st.text_input("Номер блока/комнаты *")
-                        
-                        type_map = {
-                            "🔧 Вопрос по сантехнике": "Сантехника",
-                            "⚡ Вопрос по электрике": "Электрика",
-                            "🧹 Вопрос по уборке": "Уборка",
-                            "📄 Вопрос по документам": "Документы",
-                            "🏠 Вопрос по заселению": "Заселение",
-                            "❓ Другое": "Другое"
-                        }
-                        issue_type_display = st.selectbox("Тип вопроса *", list(type_map.keys()))
-                        
-                        description = st.text_area("Подробное описание вопроса *", height=150)
-                        
-                        submitted = st.form_submit_button("✅ Подтвердить запись")
-                        
-                        if submitted:
-                            if not fio or not email or not room or not description:
-                                st.error("❌ Пожалуйста, заполните все поля")
-                            elif not validate_email(email):
-                                st.error("❌ Пожалуйста, введите корректный email адрес")
-                            else:
-                                appointment_data = {
-                                    "date": selected_date_str,
-                                    "time": st.session_state.selected_time,
-                                    "fio": fio,
-                                    "email": email,
-                                    "dormitory": dormitory,
-                                    "room": room,
-                                    "issue_type": type_map[issue_type_display],
-                                    "description": description
-                                }
-                                try:
-                                    new_id = save_appointment(appointment_data)
+                    dormitory = st.selectbox("Выберите общежитие *", DORMITORIES)
+                    room = st.text_input("Номер блока/комнаты *")
+                    
+                    type_map = {
+                        "🔧 Вопрос по сантехнике": "Сантехника",
+                        "⚡ Вопрос по электрике": "Электрика",
+                        "🧹 Вопрос по уборке": "Уборка",
+                        "📄 Вопрос по документам": "Документы",
+                        "🏠 Вопрос по заселению": "Заселение",
+                        "❓ Другое": "Другое"
+                    }
+                    issue_type_display = st.selectbox("Тип вопроса *", list(type_map.keys()))
+                    
+                    description = st.text_area("Подробное описание вопроса *", height=150)
+                    
+                    submitted = st.form_submit_button("✅ Подтвердить запись")
+                    
+                    if submitted:
+                        if not fio or not email or not room or not description:
+                            st.error("❌ Пожалуйста, заполните все поля")
+                        elif not validate_email(email):
+                            st.error("❌ Пожалуйста, введите корректный email адрес")
+                        else:
+                            appointment_data = {
+                                "date": selected_date_str,
+                                "time": st.session_state.selected_time,
+                                "fio": fio,
+                                "email": email,
+                                "dormitory": dormitory,
+                                "room": room,
+                                "issue_type": type_map[issue_type_display],
+                                "description": description
+                            }
+                            try:
+                                new_id = save_appointment(appointment_data)
+                                
+                                if new_id:
+                                    send_confirmation_to_student(email, fio, new_id, selected_date_display, st.session_state.selected_time, dormitory, type_map[issue_type_display])
+                                    send_notification_to_workers(fio, email, dormitory, room, selected_date_display, st.session_state.selected_time, type_map[issue_type_display], description, new_id)
                                     
-                                    if new_id:
-                                        send_confirmation_to_student(email, fio, new_id, selected_date_display, st.session_state.selected_time, dormitory, type_map[issue_type_display])
-                                        send_notification_to_workers(fio, email, dormitory, room, selected_date_display, st.session_state.selected_time, type_map[issue_type_display], description, new_id)
-                                        
-                                        st.success(f"✅ Запись №{new_id} успешно создана! Подтверждение придет на вашу почту.")
-                                        st.balloons()
-                                        
-                                        # Сбрасываем состояние
-                                        st.session_state.selected_day = None
-                                        st.session_state.selected_time = None
-                                        st.session_state.show_form = False
-                                        st.rerun()
-                                    else:
-                                        st.error("❌ Ошибка при сохранении записи. Попробуйте еще раз.")
-                                except Exception as e:
-                                    st.error(f"❌ Ошибка: {e}")
+                                    st.success(f"✅ Запись №{new_id} успешно создана! Подтверждение придет на вашу почту.")
+                                    st.balloons()
+                                    
+                                    # Сбрасываем состояние
+                                    st.session_state.selected_day = None
+                                    st.session_state.selected_time = None
+                                    st.session_state.show_form = False
+                                    st.rerun()
+                                else:
+                                    st.error("❌ Ошибка при сохранении записи. Попробуйте еще раз.")
+                            except Exception as e:
+                                st.error(f"❌ Ошибка: {e}")
         
         else:
             st.info("👆 Нажмите на день недели, чтобы выбрать дату записи")
