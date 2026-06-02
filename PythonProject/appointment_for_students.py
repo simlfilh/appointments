@@ -70,9 +70,9 @@ WORKER_EMAILS = [
 
 # ===== ФУНКЦИИ =====
 def get_last_update_time():
-    """Возвращает время последнего обновления страницы"""
-    now = datetime.now()
-    return now.strftime("%H:%M"), now.strftime("%d.%m.%Y")
+    utc_now = datetime.now(timezone.utc)
+    local_now = utc_now + timedelta(hours=3)  # Для часового пояса UTC+3
+    return local_now.strftime("%H:%M"), local_now.strftime("%d.%m.%Y")
 
 def get_supabase():
     return create_client(SUPABASE_URL, SUPABASE_KEY)
