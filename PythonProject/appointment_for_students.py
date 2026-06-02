@@ -259,16 +259,16 @@ def main():
         # Шаг 2: Выбор времени (если выбран день)
         if st.session_state.selected_day:
             day_info = AVAILABLE_DAYS[st.session_state.selected_day]
-            st.markdown(f"### Шаг 2: Выберите время на {day_info['display']}")
+            st.markdown(f"### Шаг 2: Выберите время")
             
             selected_date = get_next_available_date(day_info["day_code"])
             selected_date_str = selected_date.strftime("%Y-%m-%d")
             selected_date_display = selected_date.strftime("%d.%m.%Y")
             
             if selected_date == datetime.now().date():
-                st.info(f"📅 Вы выбрали: **{day_info['display']}** - СЕГОДНЯ ({selected_date_display})")
+                st.info(f"📅 Вы выбрали: **{day_info['display']}** СЕГОДНЯ ({selected_date_display})")
             else:
-                st.info(f"📅 Вы выбрали: **{day_info['display']}** - {selected_date_display}")
+                st.info(f"📅 Вы выбрали: **{day_info['display']}** {selected_date_display}")
             
             booked_slots = get_booked_slots_for_date(selected_date_str)
             
