@@ -130,8 +130,8 @@ def main():
 
     with col0:
         if st.button("🚪 Выйти"):
-        st.session_state.authenticated = False
-        st.rerun()
+            st.session_state.authenticated = False
+            st.rerun()
 
     # ===== ТЕКУЩЕЕ РАСПИСАНИЕ =====
     with st.expander("📅 Текущее расписание приема", expanded=True):
