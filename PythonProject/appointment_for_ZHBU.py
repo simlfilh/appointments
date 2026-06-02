@@ -124,9 +124,12 @@ def main():
                     st.error("❌ Неверный пароль!")
         return
 
-    st.success("✅ Вы вошли как сотрудник ЖБУ")
+    col, col0 = st.columns([2, 1])
+    with col:
+        st.success("✅ Вы вошли как сотрудник ЖБУ")
 
-    if st.button("🚪 Выйти"):
+    with col0:
+        if st.button("🚪 Выйти"):
         st.session_state.authenticated = False
         st.rerun()
 
@@ -136,8 +139,6 @@ def main():
         for day_key, day_info in SCHEDULE.items():
             if day_info["start"]:
                 schedule_text += f"- **{day_info['name']}:** {day_info['start']} — {day_info['end']} (каждые {day_info['slot_minutes']} мин)\n"
-            else:
-                schedule_text += f"- **{day_info['name']}:** Выходной\n"
         st.markdown(schedule_text)
 
     # ===== ПРОСМОТР ВСЕХ ЗАПИСЕЙ =====
