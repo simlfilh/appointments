@@ -21,20 +21,48 @@ DORMITORIES = [
     "Общежитие №7 | ул. Воронежская, д. 38"
 ]
 
-# Доступные дни для записи (только рабочие дни: ПН, ВТ, ЧТ, ПТ)
+# Доступные дни для записи с разными временными слотами
 AVAILABLE_DAYS = {
-    "ПН": {"day_code": 0, "display": "Понедельник", "active": True},
-    "ВТ": {"day_code": 1, "display": "Вторник", "active": True},
-    "ЧТ": {"day_code": 3, "display": "Четверг", "active": True},
-    "ПТ": {"day_code": 4, "display": "Пятница", "active": True}
+    "ПН": {
+        "day_code": 0, 
+        "display": "Понедельник", 
+        "active": True,
+        "time_slots": [
+            "14:00", "14:10", "14:20", "14:30", "14:40", "14:50",
+            "15:00", "15:10", "15:20", "15:30", "15:40", "15:50",
+            "16:00", "16:10", "16:20", "16:30"
+        ]
+    },
+    "ВТ": {
+        "day_code": 1, 
+        "display": "Вторник", 
+        "active": True,
+        "time_slots": [
+            "14:00", "14:10", "14:20", "14:30", "14:40", "14:50",
+            "15:00", "15:10", "15:20", "15:30", "15:40", "15:50",
+            "16:00", "16:10", "16:20", "16:30"
+        ]
+    },
+    "ЧТ": {
+        "day_code": 3, 
+        "display": "Четверг", 
+        "active": True,
+        "time_slots": [
+            "14:00", "14:10", "14:20", "14:30", "14:40", "14:50",
+            "15:00", "15:10", "15:20", "15:30", "15:40", "15:50",
+            "16:00", "16:10", "16:20", "16:30"
+        ]
+    },
+    "ПТ": {
+        "day_code": 4, 
+        "display": "Пятница", 
+        "active": True,
+        "time_slots": [
+            "13:00", "13:10", "13:20", "13:30", "13:40", "13:50",
+            "14:00", "14:10", "14:20", "14:30", "14:40", "14:50"
+        ]
+    }
 }
-
-# Временные слоты
-TIME_SLOTS = [
-    "10:30", "10:40", "10:50", "11:00", "11:10", "11:20", "11:30", "11:40",
-    "13:20", "13:30", "13:40", "13:50", "14:00", "14:10", "14:20", "14:30",
-    "14:40", "14:50", "15:00", "15:10", "15:20", "15:30", "15:40", "15:50", "16:00"
-]
 
 WORKER_EMAILS = [
     "valeraforumsch@gmail.com"
@@ -203,15 +231,13 @@ def main():
     with st.expander("📅 Режим работы ЖБУ", expanded=True):
         st.markdown("""
         **Время приема студентов:**
-        - **Понедельник:** 10:30 — 16:00
-        - **Вторник:** 10:30 — 16:00
+        - **Понедельник:** 14:00 — 16:30
+        - **Вторник:** 14:00 — 16:30
         - **Среда:** Выходной
-        - **Четверг:** 10:30 — 16:00
-        - **Пятница:** 10:30 — 16:00
+        - **Четверг:** 14:00 — 16:30
+        - **Пятница:** 13:00 — 14:50
         - **Суббота:** Выходной
         - **Воскресенье:** Выходной
-        
-        *Обеденный перерыв с 11:40 до 13:20*
         """)
     
     # Создаем вкладки
@@ -255,18 +281,19 @@ def main():
             # Получаем забронированные слоты
             booked_slots = get_booked_slots_for_date(selected_date_str)
             
-            # Показываем кнопки с временем
+            # Показываем кнопки с временем (используем time_slots из day_info)
             st.markdown("**Доступное время:**")
             
-            # Создаем строки с кнопками времени
+            # Создаем строки с кнопками времени (по 5 кнопок в строке)
+            time_slots = day_info["time_slots"]
             time_cols = st.columns(5)
-            for idx, time_slot in enumerate(TIME_SLOTS):
+            for idx, time_slot in enumerate(time_slots):
                 col_idx = idx % 5
                 with time_cols[col_idx]:
                     if time_slot in booked_slots:
-                        st.button(f"❌ {time_slot}", disabled=True, key=f"time_{time_slot}", use_container_width=True)
+                        st.button(f"❌ {time_slot}", disabled=True, key=f"time_{day_key}_{time_slot}", use_container_width=True)
                     else:
-                        if st.button(f"🟢 {time_slot}", key=f"time_{time_slot}", use_container_width=True):
+                        if st.button(f"🟢 {time_slot}", key=f"time_{day_key}_{time_slot}", use_container_width=True):
                             st.session_state.selected_time = time_slot
                             st.session_state.show_form = True
                             st.rerun()
