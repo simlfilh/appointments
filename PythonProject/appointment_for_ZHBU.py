@@ -126,14 +126,9 @@ def main():
 
     st.success("✅ Вы вошли как сотрудник ЖБУ")
 
-    col1, col2 = st.columns(2)
-    with col1:
-        if st.button("🚪 Выйти"):
-            st.session_state.authenticated = False
-            st.rerun()
-    with col2:
-        if st.button("🔄 Обновить сейчас"):
-            st.rerun()
+    if st.button("🚪 Выйти"):
+        st.session_state.authenticated = False
+        st.rerun()
 
     # ===== ТЕКУЩЕЕ РАСПИСАНИЕ =====
     with st.expander("📅 Текущее расписание приема", expanded=True):
@@ -209,7 +204,10 @@ def main():
         st.metric("Подтверждено", len(filtered_df[filtered_df["Статус"] == "Подтверждено"]))
     with col4:
         st.metric("Выполнено", len(filtered_df[filtered_df["Статус"] == "Выполнено"]))
-    
+
+    if st.button("🔄 Обновить сейчас"):
+            st.rerun()
+        
     st.dataframe(filtered_df, use_container_width=True)
     
     # ===== ИЗМЕНЕНИЕ СТАТУСА ЗАПИСИ =====
