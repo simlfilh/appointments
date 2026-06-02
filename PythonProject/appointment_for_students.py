@@ -68,7 +68,12 @@ WORKER_EMAILS = [
     "valeraforumsch@gmail.com"
 ]
 
-# ===== ФУНКЦИИ РАБОТЫ С БАЗОЙ =====
+# ===== ФУНКЦИИ =====
+def get_current_time():
+    """Возвращает текущее время и дату"""
+    now = datetime.now()
+    return now.strftime("%H:%M:%S"), now.strftime("%d.%m.%Y")
+
 def get_supabase():
     return create_client(SUPABASE_URL, SUPABASE_KEY)
 
@@ -232,7 +237,15 @@ def get_next_available_date(target_day_code):
 
 # ===== ОСНОВНОЕ ПРИЛОЖЕНИЕ =====
 def main():
-    st.title("🏠 ЖБУ СПбГЭУ | Электронная запись на прием")
+    # Отображение текущего времени в шапке
+    current_time, current_date = get_current_time()
+    
+    col1, col2 = st.columns([3, 1])
+    with col1:
+        st.title("🏠 ЖБУ СПбГЭУ | Электронная запись на прием")
+    with col2:
+        st.metric("🕐 Текущее время", current_time)
+        st.caption(f"📅 {current_date}")
     
     # Инициализация состояния
     if "selected_day" not in st.session_state:
@@ -293,7 +306,7 @@ def main():
             # Получаем забронированные слоты
             booked_slots = get_booked_slots_for_date(selected_date_str)
             
-            # Показываем кнопки с временем (все слоты, без фильтрации по времени)
+            # Показываем кнопки с временем
             st.markdown("**Доступное время:**")
             
             time_slots = day_info["time_slots"]
