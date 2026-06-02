@@ -118,17 +118,26 @@ def get_appointments_by_email(email):
         st.error(f"Ошибка при получении заявок: {e}")
         return []
 
-def cancel_appointment(appointment_id, user_email):
+ddef cancel_appointment(appointment_id, user_email):
     """Отменяет запись"""
     try:
         supabase = get_supabase()
+        # Ищем запись с таким ID и email
         response = supabase.table('appointments').select('*').eq('id', appointment_id).eq('email', user_email).execute()
+        
         if response.data:
             appointment = response.data[0]
-            supabase.table('appointments').delete().eq('id', appointment_id).execute()
-            return True, appointment
-        return False, None
-    except Exception:
+            # Удаляем запись
+            delete_response = supabase.table('appointments').delete().eq('id', appointment_id).execute()
+            if delete_response.data:
+                return True, appointment
+            else:
+                return False, None
+        else:
+            st.error(f"❌ Запись №{appointment_id} не найдена или принадлежит другому email")
+            return False, None
+    except Exception as e:
+        st.error(f"Ошибка при отмене: {e}")
         return False, None
 
 # ===== EMAIL УВЕДОМЛЕНИЯ =====
