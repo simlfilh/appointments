@@ -69,8 +69,8 @@ WORKER_EMAILS = [
 ]
 
 # ===== ФУНКЦИИ =====
-def get_current_time():
-    """Возвращает текущее время (часы:минуты) и дату"""
+def get_last_update_time():
+    """Возвращает время последнего обновления страницы"""
     now = datetime.now()
     return now.strftime("%H:%M"), now.strftime("%d.%m.%Y")
 
@@ -237,20 +237,15 @@ def get_next_available_date(target_day_code):
 
 # ===== ОСНОВНОЕ ПРИЛОЖЕНИЕ =====
 def main():
-    # Отображение текущего времени в шапке
-    current_time, current_date = get_current_time()
+    # Время последнего обновления
+    last_update_time, last_update_date = get_last_update_time()
     
     col1, col2 = st.columns([3, 1])
     with col1:
         st.title("🏠 ЖБУ СПбГЭУ | Электронная запись на прием")
     with col2:
-        st.metric("🕐 Текущее время", current_time)
-        st.caption(f"📅 {current_date}")
-    
-    # Автообновление страницы каждые 60 секунд (чтобы время обновлялось)
-    st.markdown("""
-        <meta http-equiv="refresh" content="60">
-    """, unsafe_allow_html=True)
+        st.metric("🕐 Последнее обновление", last_update_time)
+        st.caption(f"📅 {last_update_date}")
     
     # Инициализация состояния
     if "selected_day" not in st.session_state:
@@ -272,6 +267,10 @@ def main():
         - **Суббота:** Выходной
         - **Воскресенье:** Выходной
         """)
+    
+    # Кнопка обновления
+    if st.button("🔄 Обновить данные"):
+        st.rerun()
     
     # Создаем вкладки
     tab1, tab2 = st.tabs(["📝 Записаться на прием", "🗑️ Мои записи"])
