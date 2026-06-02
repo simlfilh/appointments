@@ -118,7 +118,7 @@ def get_appointments_by_email(email):
         st.error(f"Ошибка при получении заявок: {e}")
         return []
 
-ddef cancel_appointment(appointment_id, user_email):
+def cancel_appointment(appointment_id, user_email):
     """Отменяет запись"""
     try:
         supabase = get_supabase()
