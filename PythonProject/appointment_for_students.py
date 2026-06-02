@@ -344,7 +344,6 @@ def main():
                                     st.session_state.selected_day = None
                                     st.session_state.selected_time = None
                                     st.session_state.show_form = False
-                                    st.rerun()
                                 else:
                                     st.error("❌ Ошибка при сохранении записи. Попробуйте еще раз.")
                             except Exception as e:
