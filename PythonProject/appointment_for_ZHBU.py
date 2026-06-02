@@ -15,10 +15,16 @@ SMTP_PASSWORD = st.secrets["SMTP_PASSWORD"]
 
 PASSWORD = "admin123"
 
-# Доступное время для записи (по умолчанию)
-DEFAULT_TIME_SLOTS = [
-    "10:00", "11:00", "12:00", "13:00", "14:00", "15:00", "16:00", "17:00"
-]
+# Расписание по дням недели
+SCHEDULE = {
+    "Monday": {"start": "14:00", "end": "16:30", "slot_minutes": 10, "name": "Понедельник"},
+    "Tuesday": {"start": "14:00", "end": "16:30", "slot_minutes": 10, "name": "Вторник"},
+    "Wednesday": {"start": None, "end": None, "slot_minutes": 10, "name": "Среда"},
+    "Thursday": {"start": "14:00", "end": "16:30", "slot_minutes": 10, "name": "Четверг"},
+    "Friday": {"start": "13:00", "end": "15:00", "slot_minutes": 10, "name": "Пятница"},
+    "Saturday": {"start": None, "end": None, "slot_minutes": 10, "name": "Суббота"},
+    "Sunday": {"start": None, "end": None, "slot_minutes": 10, "name": "Воскресенье"}
+}
 
 # ===== ФУНКЦИИ РАБОТЫ С БАЗОЙ =====
 def get_supabase():
@@ -34,33 +40,7 @@ def get_all_appointments():
         return pd.DataFrame()
     except Exception as e:
         st.error(f"Ошибка подключения к таблице appointments: {e}")
-        st.info("Убедитесь, что таблица 'appointments' создана в Supabase")
         return pd.DataFrame()
-
-def get_time_slots():
-    """Получает доступное время из настроек"""
-    try:
-        supabase = get_supabase()
-        response = supabase.table('settings').select('value').eq('key', 'time_slots').execute()
-        if response.data:
-            return response.data[0]['value'].split(',')
-        return DEFAULT_TIME_SLOTS
-    except Exception:
-        return DEFAULT_TIME_SLOTS
-
-def update_time_slots(new_slots):
-    """Обновляет доступное время"""
-    try:
-        supabase = get_supabase()
-        response = supabase.table('settings').select('*').eq('key', 'time_slots').execute()
-        if response.data:
-            supabase.table('settings').update({'value': ','.join(new_slots)}).eq('key', 'time_slots').execute()
-        else:
-            supabase.table('settings').insert({'key': 'time_slots', 'value': ','.join(new_slots)}).execute()
-        return True
-    except Exception as e:
-        st.error(f"Ошибка при сохранении настроек: {e}")
-        return False
 
 def update_appointment_status(appointment_id, new_status):
     """Обновляет статус записи"""
@@ -68,7 +48,6 @@ def update_appointment_status(appointment_id, new_status):
         supabase = get_supabase()
         supabase.table('appointments').update({'status': new_status}).eq('id', appointment_id).execute()
         
-        # Получаем данные записи для уведомления
         response = supabase.table('appointments').select('*').eq('id', appointment_id).execute()
         if response.data:
             return response.data[0]
@@ -76,6 +55,11 @@ def update_appointment_status(appointment_id, new_status):
     except Exception as e:
         st.error(f"Ошибка при обновлении статуса: {e}")
         return None
+
+def update_schedule(new_schedule):
+    """Обновляет расписание (для сотрудника)"""
+    global SCHEDULE
+    SCHEDULE = new_schedule
 
 # ===== EMAIL УВЕДОМЛЕНИЯ =====
 def send_email(to_email, subject, body):
@@ -151,29 +135,15 @@ def main():
         if st.button("🔄 Обновить сейчас"):
             st.rerun()
 
-    # ===== НАСТРОЙКА ВРЕМЕНИ ПРИЕМА =====
-    with st.expander("⚙️ Настройка времени приема", expanded=False):
-        st.markdown("### Редактирование доступного времени")
-        
-        current_slots = get_time_slots()
-        st.info(f"Текущее доступное время: {', '.join(current_slots)}")
-        
-        new_slots_text = st.text_area(
-            "Введите доступное время (каждое время с новой строки)",
-            value="\n".join(current_slots),
-            help="Пример:\n10:00\n11:00\n12:00"
-        )
-        
-        if st.button("💾 Сохранить настройки времени"):
-            new_slots = [slot.strip() for slot in new_slots_text.split("\n") if slot.strip()]
-            if new_slots:
-                if update_time_slots(new_slots):
-                    st.success(f"✅ Время обновлено: {', '.join(new_slots)}")
-                    st.rerun()
-                else:
-                    st.error("❌ Ошибка при сохранении")
+    # ===== ТЕКУЩЕЕ РАСПИСАНИЕ =====
+    with st.expander("📅 Текущее расписание приема", expanded=True):
+        schedule_text = ""
+        for day_key, day_info in SCHEDULE.items():
+            if day_info["start"]:
+                schedule_text += f"- **{day_info['name']}:** {day_info['start']} — {day_info['end']} (каждые {day_info['slot_minutes']} мин)\n"
             else:
-                st.error("❌ Введите хотя бы одно время")
+                schedule_text += f"- **{day_info['name']}:** Выходной\n"
+        st.markdown(schedule_text)
 
     # ===== ПРОСМОТР ВСЕХ ЗАПИСЕЙ =====
     st.markdown("### Все записи на прием")
