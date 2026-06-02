@@ -239,8 +239,13 @@ def filter_past_time_slots(time_slots, selected_date):
     current_time = datetime.now().time()
     
     if selected_date == today:
-        # Оставляем только слоты, которые еще не прошли
-        return [slot for slot in time_slots if datetime.strptime(slot, "%H:%M").time() > current_time]
+        # Оставляем только слоты, которые еще не прошли (строго больше текущего времени)
+        available = []
+        for slot in time_slots:
+            slot_time = datetime.strptime(slot, "%H:%M").time()
+            if slot_time > current_time:
+                available.append(slot)
+        return available
     return time_slots
 
 # ===== ОСНОВНОЕ ПРИЛОЖЕНИЕ =====
