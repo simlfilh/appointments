@@ -21,15 +21,12 @@ DORMITORIES = [
     "Общежитие №7 | ул. Воронежская, д. 38"
 ]
 
-# Доступные дни для записи
+# Доступные дни для записи (только рабочие дни: ПН, ВТ, ЧТ, ПТ)
 AVAILABLE_DAYS = {
-    "ПН": {"day_name": "Monday", "display": "Понедельник", "active": True},
-    "ВТ": {"day_name": "Tuesday", "display": "Вторник", "active": True},
-    "СР": {"day_name": "Wednesday", "display": "Среда", "active": False},  # Выходной
-    "ЧТ": {"day_name": "Thursday", "display": "Четверг", "active": True},
-    "ПТ": {"day_name": "Friday", "display": "Пятница", "active": True},
-    "СБ": {"day_name": "Saturday", "display": "Суббота", "active": False},  # Выходной
-    "ВС": {"day_name": "Sunday", "display": "Воскресенье", "active": False}  # Выходной
+    "ПН": {"day_code": 0, "display": "Понедельник", "active": True},
+    "ВТ": {"day_code": 1, "display": "Вторник", "active": True},
+    "ЧТ": {"day_code": 3, "display": "Четверг", "active": True},
+    "ПТ": {"day_code": 4, "display": "Пятница", "active": True}
 }
 
 # Временные слоты
@@ -206,13 +203,15 @@ def main():
     with st.expander("📅 Режим работы ЖБУ", expanded=True):
         st.markdown("""
         **Время приема студентов:**
-        - **Понедельник:** 10:30 — 16:00 (перерыв 11:40-13:20)
-        - **Вторник:** 10:30 — 16:00 (перерыв 11:40-13:20)
+        - **Понедельник:** 10:30 — 16:00
+        - **Вторник:** 10:30 — 16:00
         - **Среда:** Выходной
-        - **Четверг:** 10:30 — 16:00 (перерыв 11:40-13:20)
-        - **Пятница:** 10:30 — 16:00 (перерыв 11:40-13:20)
+        - **Четверг:** 10:30 — 16:00
+        - **Пятница:** 10:30 — 16:00
         - **Суббота:** Выходной
         - **Воскресенье:** Выходной
+        
+        *Обеденный перерыв с 11:40 до 13:20*
         """)
     
     # Создаем вкладки
@@ -223,19 +222,16 @@ def main():
         # Шаг 1: Выбор дня недели
         st.markdown("### Шаг 1: Выберите день недели")
         
-        day_cols = st.columns(7)
-        day_buttons = {}
+        # 4 кнопки для 4 дней
+        day_cols = st.columns(4)
         
         for i, (day_key, day_info) in enumerate(AVAILABLE_DAYS.items()):
             with day_cols[i]:
-                if day_info["active"]:
-                    if st.button(f"📅 {day_key}\n{day_info['display']}", key=f"day_{day_key}", use_container_width=True):
-                        st.session_state.selected_day = day_key
-                        st.session_state.selected_time = None
-                        st.session_state.show_form = False
-                        st.rerun()
-                else:
-                    st.button(f"🚫 {day_key}\n{day_info['display']}", disabled=True, key=f"day_{day_key}_disabled", use_container_width=True)
+                if st.button(f"📅 {day_key}\n{day_info['display']}", key=f"day_{day_key}", use_container_width=True):
+                    st.session_state.selected_day = day_key
+                    st.session_state.selected_time = None
+                    st.session_state.show_form = False
+                    st.rerun()
         
         # Шаг 2: Выбор времени (если выбран день)
         if st.session_state.selected_day:
@@ -244,7 +240,10 @@ def main():
             
             # Получаем ближайшую дату выбранного дня недели
             today = datetime.now().date()
-            days_ahead = (AVAILABLE_DAYS[st.session_state.selected_day]["day_name"] - today.weekday() + 7) % 7
+            target_day = day_info["day_code"]
+            current_day = today.weekday()
+            
+            days_ahead = (target_day - current_day + 7) % 7
             if days_ahead == 0:
                 days_ahead = 7
             selected_date = today + timedelta(days=days_ahead)
@@ -350,10 +349,8 @@ def main():
                 if appointments:
                     st.success(f"Найдено {len(appointments)} записей")
                     
-                    # Сортируем по дате
                     appointments_sorted = sorted(appointments, key=lambda x: (x['date'], x['time']))
                     
-                    # Показываем карточки записей
                     for app in appointments_sorted:
                         with st.container():
                             col1, col2, col3 = st.columns([3, 2, 1])
