@@ -251,7 +251,7 @@ def main():
         
         for i, (day_key, day_info) in enumerate(AVAILABLE_DAYS.items()):
             with day_cols[i]:
-                if st.button(f"📅 {day_key}\n{day_info['display']}", key=f"day_{day_key}", use_container_width=True):
+                if st.button(f"📅 {day_info['display']}", key=f"day_{day_key}", use_container_width=True):
                     st.session_state.selected_day = day_key
                     st.session_state.selected_time = None
                     st.session_state.show_form = False
