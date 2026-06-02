@@ -70,9 +70,9 @@ WORKER_EMAILS = [
 
 # ===== ФУНКЦИИ =====
 def get_current_time():
-    """Возвращает текущее время и дату"""
+    """Возвращает текущее время (часы:минуты) и дату"""
     now = datetime.now()
-    return now.strftime("%H:%M:%S"), now.strftime("%d.%m.%Y")
+    return now.strftime("%H:%M"), now.strftime("%d.%m.%Y")
 
 def get_supabase():
     return create_client(SUPABASE_URL, SUPABASE_KEY)
@@ -246,6 +246,11 @@ def main():
     with col2:
         st.metric("🕐 Текущее время", current_time)
         st.caption(f"📅 {current_date}")
+    
+    # Автообновление страницы каждые 60 секунд (чтобы время обновлялось)
+    st.markdown("""
+        <meta http-equiv="refresh" content="60">
+    """, unsafe_allow_html=True)
     
     # Инициализация состояния
     if "selected_day" not in st.session_state:
