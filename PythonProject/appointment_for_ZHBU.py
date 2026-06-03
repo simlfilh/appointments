@@ -7,7 +7,6 @@ import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
-# ===== НАСТРОЙКИ ИЗ СЕКРЕТОВ =====
 SUPABASE_URL = st.secrets["SUPABASE_URL"]
 SUPABASE_KEY = st.secrets["SUPABASE_KEY"]
 SMTP_EMAIL = st.secrets["SMTP_EMAIL"]
@@ -15,7 +14,6 @@ SMTP_PASSWORD = st.secrets["SMTP_PASSWORD"]
 
 PASSWORD = "admin123"
 
-# Расписание по дням недели
 SCHEDULE = {
     "Monday": {"start": "14:00", "end": "16:30", "slot_minutes": 10, "name": "Понедельник"},
     "Tuesday": {"start": "14:00", "end": "16:30", "slot_minutes": 10, "name": "Вторник"},
@@ -26,12 +24,10 @@ SCHEDULE = {
     "Sunday": {"start": None, "end": None, "slot_minutes": 10, "name": "Воскресенье"}
 }
 
-# ===== ФУНКЦИИ РАБОТЫ С БАЗОЙ =====
 def get_supabase():
     return create_client(SUPABASE_URL, SUPABASE_KEY)
 
 def get_all_appointments():
-    """Получает все записи"""
     try:
         supabase = get_supabase()
         response = supabase.table('appointments').select('*').order('date', desc=False).order('time', desc=False).execute()
@@ -43,7 +39,6 @@ def get_all_appointments():
         return pd.DataFrame()
 
 def update_appointment_status(appointment_id, new_status):
-    """Обновляет статус записи"""
     try:
         supabase = get_supabase()
         supabase.table('appointments').update({'status': new_status}).eq('id', appointment_id).execute()
@@ -57,11 +52,9 @@ def update_appointment_status(appointment_id, new_status):
         return None
 
 def update_schedule(new_schedule):
-    """Обновляет расписание (для сотрудника)"""
     global SCHEDULE
     SCHEDULE = new_schedule
 
-# ===== EMAIL УВЕДОМЛЕНИЯ =====
 def send_email(to_email, subject, body):
     try:
         msg = MIMEMultipart()
@@ -96,18 +89,15 @@ def send_status_notification(student_email, student_name, appointment_id, date, 
 """
     return send_email(student_email, subject, body)
 
-# ===== ФУНКЦИЯ ЭКСПОРТА В EXCEL =====
 def to_excel(df):
     output = BytesIO()
     with pd.ExcelWriter(output, engine='openpyxl') as writer:
         df.to_excel(writer, index=False, sheet_name='Записи')
     return output.getvalue()
 
-# ===== ОСНОВНОЕ ПРИЛОЖЕНИЕ =====
 def main():
     st.title("🔐 Панель сотрудника ЖБУ | Управление записью на прием")
 
-    # Авторизация
     if "authenticated" not in st.session_state:
         st.session_state.authenticated = False
 
@@ -133,7 +123,6 @@ def main():
             st.session_state.authenticated = False
             st.rerun()
 
-    # ===== ТЕКУЩЕЕ РАСПИСАНИЕ =====
     with st.expander("📅 Текущее расписание приема", expanded=True):
         schedule_text = ""
         for day_key, day_info in SCHEDULE.items():
@@ -141,7 +130,6 @@ def main():
                 schedule_text += f"- **{day_info['name']}:** {day_info['start']} — {day_info['end']} (каждые {day_info['slot_minutes']} мин)\n"
         st.markdown(schedule_text)
 
-    # ===== ПРОСМОТР ВСЕХ ЗАПИСЕЙ =====
     st.markdown("### Все записи на прием")
     
     appointments_df = get_all_appointments()
@@ -150,7 +138,6 @@ def main():
         st.info("Пока нет ни одной записи")
         return
     
-    # Переименовываем колонки
     display_df = appointments_df.rename(columns={
         "id": "ID",
         "date": "Дата",
@@ -164,7 +151,6 @@ def main():
         "status": "Статус"
     })
     
-    # ===== ФИЛЬТРЫ =====
     col1, col2, col3 = st.columns(3)
     with col1:
         date_filter = st.selectbox("Фильтр по дате", ["Все", "Сегодня", "Завтра", "Выбрать дату"])
@@ -174,7 +160,6 @@ def main():
         type_options = ["Все"] + display_df["Вопрос"].unique().tolist()
         type_filter = st.selectbox("Фильтр по типу вопроса", type_options)
     
-    # Применяем фильтры
     filtered_df = display_df.copy()
     
     today = datetime.now().date()
@@ -195,7 +180,6 @@ def main():
     
     st.info(f"📊 Найдено записей: {len(filtered_df)} из {len(display_df)}")
     
-    # Статистика
     col1, col2, col3, col4 = st.columns(4)
     with col1:
         st.metric("Всего в фильтре", len(filtered_df))
@@ -211,7 +195,6 @@ def main():
         
     st.dataframe(filtered_df, use_container_width=True)
     
-    # ===== ИЗМЕНЕНИЕ СТАТУСА ЗАПИСИ =====
     st.markdown("---")
     st.markdown("### Изменить статус записи")
     
@@ -242,7 +225,6 @@ def main():
         else:
             st.error("❌ Ошибка при обновлении статуса")
     
-    # ===== ЭКСПОРТ В EXCEL =====
     st.markdown("---")
     st.markdown("### 📥 Экспорт данных")
     
