@@ -169,6 +169,7 @@ def get_check_in_message(student_name, appointment_id, date, time, dormitory):
 
 def get_relocation_message(student_name, appointment_id, date, time, dormitory):
     consent_form_url = "https://unecon.ru/wp-content/uploads/2022/05/obrazec_soglasiya_dlya_roditeley_opekunov_0.pdf"
+    info_url = "https://kosigina19k2.streamlit.app/settling"
     
     return f"""
 Здравствуйте, {student_name}!
