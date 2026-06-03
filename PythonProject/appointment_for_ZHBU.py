@@ -162,16 +162,17 @@ def main():
         type_filter = st.selectbox("Фильтр по типу вопроса", type_options)
     
     filtered_df = display_df.copy()
-    
+
+    # 
     today = datetime.now().date()
     if date_filter == "Сегодня":
-        filtered_df = filtered_df[filtered_df["Дата"] == today.strftime("%Y-%m-%d")]
+        filtered_df = filtered_df[filtered_df["Дата"] == today.strftime("%d.%m.%Y")]
     elif date_filter == "Завтра":
         tomorrow = today + timedelta(days=1)
-        filtered_df = filtered_df[filtered_df["Дата"] == tomorrow.strftime("%Y-%m-%d")]
+        filtered_df = filtered_df[filtered_df["Дата"] == tomorrow.strftime("%d.%m.%Y")]
     elif date_filter == "Выбрать дату":
         selected_date_filter = st.date_input("Выберите дату", value=today)
-        filtered_df = filtered_df[filtered_df["Дата"] == selected_date_filter.strftime("%Y-%m-%d")]
+        filtered_df = filtered_df[filtered_df["Дата"] == selected_date_filter.strftime("%d.%m.%Y")]
     
     if status_filter != "Все":
         filtered_df = filtered_df[filtered_df["Статус"] == status_filter]
@@ -241,7 +242,7 @@ def main():
     st.download_button(
         label="📊 Скачать в Excel формате",
         data=excel_data,
-        file_name=f"zapis_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
+        file_name=f"Электронная запись {datetime.now().strftime('%d.%m.%Y_%H:%M:%S')}.xlsx",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         use_container_width=True
     )
