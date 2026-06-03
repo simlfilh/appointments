@@ -377,7 +377,7 @@ def get_worker_check_in_message(student_name, student_email, dormitory, room, da
 📋 ВОПРОС: Заселение в общежитие
 
 📝 ДОПОЛНИТЕЛЬНАЯ ИНФОРМАЦИЯ:
-{description if description else "Не указана"
+{description if description else "Не указана"}
 """
 
 def get_worker_relocation_message(student_name, student_email, dormitory, room, date, time, description, appointment_id):
@@ -396,6 +396,7 @@ def get_worker_relocation_message(student_name, student_email, dormitory, room, 
 📋 ВОПРОС: Переселение в другое общежитие
 
 📝 ПРИЧИНА ПЕРЕСЕЛЕНИЯ:
+{description if description else "Не указана"}
 """
 
 def get_worker_check_out_message(student_name, student_email, dormitory, room, date, time, description, appointment_id):
