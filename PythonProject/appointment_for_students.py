@@ -7,13 +7,11 @@ import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
-# ===== НАСТРОЙКИ ИЗ СЕКРЕТОВ =====
 SUPABASE_URL = st.secrets["SUPABASE_URL"]
 SUPABASE_KEY = st.secrets["SUPABASE_KEY"]
 SMTP_EMAIL = st.secrets["SMTP_EMAIL"]
 SMTP_PASSWORD = st.secrets["SMTP_PASSWORD"]
 
-# Список общежитий
 DORMITORIES = [
     "Общежитие №2 | Чкаловский пр-т, д. 27",
     "Общежитие №3 | пр-т Косыгина, д. 19, к. 2",
@@ -21,7 +19,6 @@ DORMITORIES = [
     "Общежитие №7 | ул. Воронежская, д. 38"
 ]
 
-# Доступные дни для записи с разными временными слотами
 AVAILABLE_DAYS = {
     "ПН": {
         "day_code": 0, 
@@ -68,7 +65,6 @@ WORKER_EMAILS = [
     "valeraforumsch@gmail.com"
 ]
 
-# ===== ФУНКЦИИ =====
 def get_last_update_time():
     utc_now = datetime.now(timezone.utc)
     local_now = utc_now + timedelta(hours=3)
@@ -78,7 +74,6 @@ def get_supabase():
     return create_client(SUPABASE_URL, SUPABASE_KEY)
 
 def get_booked_slots_for_date(date_str):
-    """Получает уже забронированные слоты на дату"""
     try:
         supabase = get_supabase()
         response = supabase.table('appointments').select('time').eq('date', date_str).execute()
@@ -89,7 +84,6 @@ def get_booked_slots_for_date(date_str):
         return []
 
 def save_appointment(data):
-    """Сохраняет запись в базу"""
     supabase = get_supabase()
     result = supabase.table('appointments').insert({
         "date": data["date"],
@@ -107,7 +101,6 @@ def save_appointment(data):
     return None
 
 def get_appointments_by_email(email):
-    """Получает все записи пользователя по email (только для просмотра)"""
     try:
         supabase = get_supabase()
         response = supabase.table('appointments').select('*').eq('email', email).order('date', desc=False).order('time', desc=False).execute()
@@ -118,7 +111,6 @@ def get_appointments_by_email(email):
         st.error(f"Ошибка при получении заявок: {e}")
         return []
 
-# ===== EMAIL УВЕДОМЛЕНИЯ =====
 def send_email(to_email, subject, body):
     try:
         msg = MIMEMultipart()
@@ -203,9 +195,7 @@ def get_next_available_date(target_day_code):
         days_ahead = 7
     return today + timedelta(days=days_ahead)
 
-# ===== ОСНОВНОЕ ПРИЛОЖЕНИЕ =====
 def main():
-    # Время последнего обновления
     last_update_time, last_update_date = get_last_update_time()
     
     col1, col2 = st.columns([3, 1])
@@ -215,7 +205,6 @@ def main():
         st.metric("🕐 Последнее обновление", last_update_time)
         st.caption(f"📅 {last_update_date}")
     
-    # Инициализация состояния
     if "selected_day" not in st.session_state:
         st.session_state.selected_day = None
     if "selected_time" not in st.session_state:
@@ -223,7 +212,6 @@ def main():
     if "show_form" not in st.session_state:
         st.session_state.show_form = False
     
-    # Показываем расписание
     with st.expander("📅 Режим работы ЖБУ", expanded=True):
         st.markdown("""
         **Время приема студентов:**
@@ -234,16 +222,12 @@ def main():
         - **Пятница:** 13:00 — 15:00
         """)
     
-    # Кнопка обновления
     if st.button("🔄 Обновить данные"):
         st.rerun()
     
-    # Создаем вкладки
     tab1, tab2 = st.tabs(["📝 Записаться на прием", "📋 Мои записи"])
     
-    # ===== ВКЛАДКА 1: ЗАПИСЬ НА ПРИЕМ =====
     with tab1:
-        # Шаг 1: Выбор дня недели
         st.markdown("### Шаг 1: Выберите день недели")
         
         day_cols = st.columns(4)
@@ -256,7 +240,6 @@ def main():
                     st.session_state.show_form = False
                     st.rerun()
         
-        # Шаг 2: Выбор времени (если выбран день)
         if st.session_state.selected_day:
             day_info = AVAILABLE_DAYS[st.session_state.selected_day]
             st.markdown(f"### Шаг 2: Выберите время")
@@ -287,7 +270,6 @@ def main():
                             st.session_state.show_form = True
                             st.rerun()
             
-            # Шаг 3: Форма для заполнения данных
             if st.session_state.show_form and st.session_state.selected_time:
                 st.markdown(f"### Шаг 3: Заполните данные для записи на {st.session_state.selected_time}")
                 
@@ -301,12 +283,14 @@ def main():
                     room = st.text_input("Номер блока/комнаты *")
                     
                     type_map = {
-                        "🔧 Вопрос по сантехнике": "Сантехника",
-                        "⚡ Вопрос по электрике": "Электрика",
-                        "🧹 Вопрос по уборке": "Уборка",
-                        "📄 Вопрос по документам": "Документы",
-                        "🏠 Вопрос по заселению": "Заселение",
-                        "❓ Другое": "Другое"
+                        "Заселение в общежитие": "Заселение в общежитие",
+                        "Переселение в другое общежитие": "Переселение в другое общежитие",
+                        "Выселение из общежития": "Выселение из общежития",
+                        "Заселение в МСГ (в т. ч. СПО)": "Заселение в МСГ (в т. ч. СПО)",
+                        "Временная регистрация": "Временная регистрация",
+                        "Льготы": "Льготы",
+                        "Справки": "Справки",
+                        "Другое": "Другое"
                     }
                     issue_type_display = st.selectbox("Тип вопроса *", list(type_map.keys()))
                     
@@ -340,7 +324,6 @@ def main():
                                     st.success(f"✅ Запись №{new_id} успешно создана! Подтверждение придет на вашу почту.")
                                     st.balloons()
                                     
-                                    # Сбрасываем состояние
                                     st.session_state.selected_day = None
                                     st.session_state.selected_time = None
                                     st.session_state.show_form = False
@@ -350,9 +333,8 @@ def main():
                                 st.error(f"❌ Ошибка: {e}")
         
         else:
-            st.info("👆 Нажмите на день недели, чтобы выбрать дату записи")
+            st.info("👆 Выберите дату и время записи")
     
-    # ===== ВКЛАДКА 2: МОИ ЗАПИСИ (ТОЛЬКО ПРОСМОТР, БЕЗ УДАЛЕНИЯ) =====
     with tab2:
         st.markdown("### Мои записи на прием")
         
@@ -364,17 +346,14 @@ def main():
                 if appointments:
                     st.success(f"Найдено {len(appointments)} записей")
                     
-                    # Создаем DataFrame для отображения
                     df = pd.DataFrame(appointments)
                     df_display = df[['id', 'date', 'time', 'issue_type', 'dormitory', 'room', 'status']]
                     df_display.columns = ['№', 'Дата', 'Время', 'Вопрос', 'Общежитие', 'Комната', 'Статус']
                     
-                    # Сортируем по дате и времени
                     df_display = df_display.sort_values(['Дата', 'Время'])
                     
                     st.dataframe(df_display, use_container_width=True)
                     
-                    # Добавляем пояснение
                     st.info("ℹ️ По всем вопросам по записи обращайтесь в ЖБУ. Отмена записи возможна только через сотрудника.")
                 else:
                     st.warning("Записи не найдены")
