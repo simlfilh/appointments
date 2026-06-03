@@ -607,7 +607,7 @@ def main():
             st.markdown(f"### Шаг 2: Выберите время")
             
             selected_date = get_next_available_date(day_info["day_code"])
-            selected_date_str = selected_date.strftime("%Y-%m-%d")
+            selected_date_str = selected_date.strftime("%d.%m.%Y")
             selected_date_display = selected_date.strftime("%d.%m.%Y")
             
             if selected_date == datetime.now().date():
