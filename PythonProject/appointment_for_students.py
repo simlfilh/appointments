@@ -129,9 +129,198 @@ def send_email(to_email, subject, body):
         print(f"Ошибка: {e}")
         return False
 
-def send_confirmation_to_student(student_email, student_name, appointment_id, date, time, dormitory, issue_type):
-    subject = f"✅ Запись на прием №{appointment_id} подтверждена"
-    body = f"""
+def get_check_in_message(student_name, appointment_id, date, time, dormitory):
+    consent_form_url = "https://unecon.ru/wp-content/uploads/2022/05/obrazec_soglasiya_dlya_roditeley_opekunov_0.pdf"
+    info_url = "https://kosigina19k2.streamlit.app/settling"
+    
+    return f"""
+Здравствуйте, {student_name}!
+
+Ваша запись на заселение в общежитие успешно создана.
+
+📅 Дата: {date}
+⏰ Время: {time}
+🏠 {dormitory}
+📋 Вопрос: Заселение в общежитие
+
+Статус: Запланировано
+
+Для заселения при себе необходимо иметь:
+
+1. Для граждан Российской Федерации:
+• Копия паспорта с регистрацией по месту жительства;
+• Копия медицинской справки с результатами флюорографического обследования;
+• 1 фото формата 3х4;
+• Для несовершеннолетних студентов: оригинал нотариально заверенного согласия родителей (опекунов) на заключение договора найма жилого помещения в общежитии ([образец заявления]({consent_form_url}));
+• Документы и копии документов, подтверждающих льготы, указанные в ч. 5 ст. 36 Федерального закона от 29 декабря 2012 г. №273-ФЗ "Об образовании в Российской Федерации" (при наличии).
+
+2. Для граждан иностранных государств:
+• Для несовершеннолетних студентов: оригинал нотариально заверенного согласия родителей (опекунов) на заключение договора найма жилого помещения в общежитии (образец заявления);
+• Паспорт (с нотариально заверенным переводом на русский язык либо переводом, заверенным подписью руководителя Управления международного сотрудничества и печатью);
+• Копия медицинской справки с результатами флюорографического обследования.
+
+Дополнительная информация доступна по [ссылке]({info_url}).
+
+Ждем вас в кабинете №5.
+
+С уважением,
+Администрация Жилищно-бытового управления СПбГЭУ
+"""
+
+def get_relocation_message(student_name, appointment_id, date, time, dormitory):
+    return f"""
+Здравствуйте, {student_name}!
+
+Ваша запись на переселение в другое общежитие успешно создана.
+
+📅 Дата: {date}
+⏰ Время: {time}
+🏠 {dormitory}
+📋 Вопрос: Переселение 
+
+Статус: Запланировано
+
+Для рассмотрения вопроса о переселении внутри своего общежития обратитесь к заведующему общежитием, в котором вы проживаете.
+
+Для рассмотрения вопроса о переселении из одного общежития в другое общежитие, при себе необходимо иметь:
+
+1. Для граждан Российской Федерации:
+• Копия паспорта с регистрацией по месту жительства;
+• Копия медицинской справки с результатами флюорографического обследования;
+• 1 фото формата 3х4;
+• Для несовершеннолетних студентов: оригинал нотариально заверенного согласия родителей (опекунов) на заключение договора найма жилого помещения в общежитии ([образец заявления]({consent_form_url}));
+• Документы и копии документов, подтверждающих льготы, указанные в ч. 5 ст. 36 Федерального закона от 29 декабря 2012 г. №273-ФЗ "Об образовании в Российской Федерации" (при наличии).
+
+2. Для граждан иностранных государств:
+• Для несовершеннолетних студентов: оригинал нотариально заверенного согласия родителей (опекунов) на заключение договора найма жилого помещения в общежитии (образец заявления);
+• Паспорт (с нотариально заверенным переводом на русский язык либо переводом, заверенным подписью руководителя Управления международного сотрудничества и печатью);
+• Копия медицинской справки с результатами флюорографического обследования.
+
+Дополнительная информация доступна по [ссылке]({info_url}).
+
+Ждем вас в кабинете №5.
+
+С уважением,
+Администрация Жилищно-бытового управления СПбГЭУ
+"""
+
+def get_check_out_message(student_name, appointment_id, date, time, dormitory):
+    return f"""
+Здравствуйте, {student_name}!
+
+Ваша запись на выселение из общежития успешно создана.
+
+📅 Дата: {date}
+⏰ Время: {time}
+🏠 {dormitory}
+📋 Вопрос: Выселение из общежития
+
+Статус: Запланировано
+
+Для выселения необходимо:
+1. Написать заявление на выезд у заведующего студенческим общежитием;
+2. Погасить задолженность за проживание в общежитии;
+3. Получить и заполнить обходной лист;
+4. Заполненный обходной лист отдать заведующему студенческим общежитием вместе с ключами от комнаты.
+
+Выезд из общежития БЕЗ ОБХОДНОГО ЛИСТА не осуществляется. Оплата за проживание в общежитии будет также накапливаться.
+
+Ждем вас в кабинете №5.
+
+Если у вас не осталось никаких вопросов, то приходить по записи в ЖБУ не нужно. В ином случае, если вопросы возникнут, ваша запись будет актуальна.
+
+С уважением,
+Администрация Жилищно-бытового управления СПбГЭУ
+"""
+
+def get_msg_settlement_message(student_name, appointment_id, date, time, dormitory):
+    return f"""
+Здравствуйте, {student_name}!
+
+Ваша запись по вопросу заселения в МСГ (в т. ч. СПО) успешно создана.
+
+📅 Дата: {date}
+⏰ Время: {time}
+🏠 {dormitory}
+📋 Вопрос: Заселение в МСГ (в т. ч. СПО)
+
+Статус: Запланировано
+
+Ждем вас в кабинете №5.
+
+С уважением,
+Администрация Жилищно-бытового управления СПбГЭУ
+"""
+
+def get_registration_message(student_name, appointment_id, date, time, dormitory):
+    return f"""
+Здравствуйте, {student_name}!
+
+Ваша запись по вопросу временной регистрации успешно создана.
+
+📅 Дата: {date}
+⏰ Время: {time}
+🏠 {dormitory}
+📋 Вопрос: Временная регистрация
+
+Статус: Запланировано
+
+Если вы проживаете не в общежитии №3 (пр-т Косыгина, д. 19, к.2), то обратитесь к паспортисту в своем общежитии.
+
+Для студентов, проживающих в общежитии №3 (пр-т Косыгина, д. 19, к. 2), по решению вопроса о временной регистрации при себе необходимо иметь:
+• Паспорт
+• Студенческий билет
+• Договор найма
+
+Ждем вас в кабинете №5.
+
+С уважением,
+Администрация Жилищно-бытового управления СПбГЭУ
+"""
+
+def get_benefits_message(student_name, appointment_id, date, time, dormitory):
+    return f"""
+Здравствуйте, {student_name}!
+
+Ваша запись по вопросу льгот успешно создана.
+
+📅 Дата: {date}
+⏰ Время: {time}
+🏠 {dormitory}
+📋 Вопрос: Льготы
+
+Статус: Запланировано
+
+Для рассмотрения вопроса о льготах при себе необходимо иметь документы и/или копии документов, подтверждающих льготы, 
+указанные в ч. 5 ст. 36 Федерального закона от 29 декабря 2012 г. №273-ФЗ "Об образовании в Российской Федерации" (при наличии).
+
+Ждем вас в кабинете №5.
+
+С уважением,
+Администрация Жилищно-бытового управления СПбГЭУ
+"""
+
+def get_certificate_message(student_name, appointment_id, date, time, dormitory):
+    return f"""
+Здравствуйте, {student_name}!
+
+Ваша запись на получение необходимой справки успешно создана.
+
+📅 Дата: {date}
+⏰ Время: {time}
+🏠 {dormitory}
+📋 Вопрос: Справки
+
+Статус: Запланировано
+
+Ждем вас в кабинете №5.
+
+С уважением,
+Администрация Жилищно-бытового управления СПбГЭУ
+"""
+
+def get_other_message(student_name, appointment_id, date, time, dormitory, description):
+    return f"""
 Здравствуйте, {student_name}!
 
 Ваша запись на прием в Жилищно-бытовое управление успешно создана.
@@ -139,26 +328,45 @@ def send_confirmation_to_student(student_email, student_name, appointment_id, da
 📅 Дата: {date}
 ⏰ Время: {time}
 🏠 {dormitory}
-📋 Вопрос: {issue_type}
+📋 Вопрос: Другое
 
 Статус: Запланировано
 
-При себе необходимо иметь студенческий билет.
+Ваш вопрос: {description[:200]}{'...' if len(description) > 200 else ''}
+
+Ждем вас в кабинете №5.
 
 С уважением,
 Администрация Жилищно-бытового управления СПбГЭУ
 """
+
+def send_confirmation_to_student(student_email, student_name, appointment_id, date, time, dormitory, issue_type, description=""):
+    if issue_type == "Заселение в общежитие":
+        body = get_check_in_message(student_name, appointment_id, date, time, dormitory)
+    elif issue_type == "Переселение в другое общежитие":
+        body = get_relocation_message(student_name, appointment_id, date, time, dormitory)
+    elif issue_type == "Выселение из общежития":
+        body = get_check_out_message(student_name, appointment_id, date, time, dormitory)
+    elif issue_type == "Заселение в МСГ (в т. ч. СПО)":
+        body = get_msg_settlement_message(student_name, appointment_id, date, time, dormitory)
+    elif issue_type == "Временная регистрация":
+        body = get_registration_message(student_name, appointment_id, date, time, dormitory)
+    elif issue_type == "Льготы":
+        body = get_benefits_message(student_name, appointment_id, date, time, dormitory)
+    elif issue_type == "Справки":
+        body = get_certificate_message(student_name, appointment_id, date, time, dormitory)
+    else:  
+        body = get_other_message(student_name, appointment_id, date, time, dormitory, description)
+    
+    subject = f"✅ Запись на прием №{appointment_id} подтверждена"
     return send_email(student_email, subject, body)
 
-def send_notification_to_workers(student_name, student_email, dormitory, room, date, time, issue_type, description, appointment_id):
-    subject = f"🔔 НОВАЯ ЗАПИСЬ №{appointment_id}"
-    body = f"""
-📋 НОВАЯ ЗАПИСЬ НА ПРИЕМ
+def get_worker_check_in_message(student_name, student_email, dormitory, room, date, time, description, appointment_id):
+    return f"""
+📋 НОВАЯ ЗАПИСЬ НА ЗАСЕЛЕНИЕ №{appointment_id}
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 📅 Дата: {date}
 ⏰ Время: {time}
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 👤 СТУДЕНТ
 • ФИО: {student_name}
@@ -166,14 +374,165 @@ def send_notification_to_workers(student_name, student_email, dormitory, room, d
 • Общежитие: {dormitory}
 • Комната: {room}
 
-📋 ВОПРОС: {issue_type}
+📋 ВОПРОС: Заселение в общежитие
 
-📝 ОПИСАНИЕ:
-{description}
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Зайдите в панель управления для обработки записи.
+📝 ДОПОЛНИТЕЛЬНАЯ ИНФОРМАЦИЯ:
+{description if description else "Не указана"
 """
+
+def get_worker_relocation_message(student_name, student_email, dormitory, room, date, time, description, appointment_id):
+    return f"""
+📋 НОВАЯ ЗАПИСЬ НА ПЕРЕСЕЛЕНИЕ №{appointment_id}
+
+📅 Дата: {date}
+⏰ Время: {time}
+
+👤 СТУДЕНТ
+• ФИО: {student_name}
+• Email: {student_email}
+• Текущее общежитие: {dormitory}
+• Комната: {room}
+
+📋 ВОПРОС: Переселение в другое общежитие
+
+📝 ПРИЧИНА ПЕРЕСЕЛЕНИЯ:
+"""
+
+def get_worker_check_out_message(student_name, student_email, dormitory, room, date, time, description, appointment_id):
+    return f"""
+📋 НОВАЯ ЗАПИСЬ НА ВЫСЕЛЕНИЕ №{appointment_id}
+
+📅 Дата: {date}
+⏰ Время: {time}
+
+👤 СТУДЕНТ
+• ФИО: {student_name}
+• Email: {student_email}
+• Общежитие: {dormitory}
+• Комната: {room}
+
+📋 ВОПРОС: Выселение из общежития
+
+📝 ПРИЧИНА ВЫСЕЛЕНИЯ:
+{description if description else "Не указана"}
+"""
+
+def get_worker_msg_settlement_message(student_name, student_email, dormitory, room, date, time, description, appointment_id):
+    return f"""
+📋 НОВАЯ ЗАПИСЬ В МСГ №{appointment_id}
+
+📅 Дата: {date}
+⏰ Время: {time}
+
+👤 СТУДЕНТ
+• ФИО: {student_name}
+• Email: {student_email}
+• Общежитие: {dormitory}
+• Комната: {room}
+
+📋 ВОПРОС: Заселение в МСГ (в т. ч. СПО)
+
+📝 ДОПОЛНИТЕЛЬНАЯ ИНФОРМАЦИЯ:
+{description if description else "Не указана"}
+"""
+
+def get_worker_registration_message(student_name, student_email, dormitory, room, date, time, description, appointment_id):
+    return f"""
+📋 НОВАЯ ЗАПИСЬ НА ВРЕМЕННУЮ РЕГИСТРАЦИЮ №{appointment_id}
+
+📅 Дата: {date}
+⏰ Время: {time}
+
+👤 СТУДЕНТ
+• ФИО: {student_name}
+• Email: {student_email}
+• Общежитие: {dormitory}
+• Комната: {room}
+
+📋 ВОПРОС: Временная регистрация
+
+📝 ДОПОЛНИТЕЛЬНАЯ ИНФОРМАЦИЯ:
+{description if description else "Не указана"}
+"""
+
+def get_worker_benefits_message(student_name, student_email, dormitory, room, date, time, description, appointment_id):
+    return f"""
+📋 НОВАЯ ЗАПИСЬ ПО ЛЬГОТАМ №{appointment_id}
+
+📅 Дата: {date}
+⏰ Время: {time}
+
+👤 СТУДЕНТ
+• ФИО: {student_name}
+• Email: {student_email}
+• Общежитие: {dormitory}
+• Комната: {room}
+
+📋 ВОПРОС: Льготы
+
+📝 ТИП ЛЬГОТЫ/ПОДРОБНОСТИ:
+{description if description else "Не указаны"}
+"""
+
+def get_worker_certificate_message(student_name, student_email, dormitory, room, date, time, description, appointment_id):
+    return f"""
+📋 НОВАЯ ЗАПИСЬ НА СПРАВКУ №{appointment_id}
+
+📅 Дата: {date}
+⏰ Время: {time}
+
+👤 СТУДЕНТ
+• ФИО: {student_name}
+• Email: {student_email}
+• Общежитие: {dormitory}
+• Комната: {room}
+
+📋 ВОПРОС: Справки
+
+📝 ТРЕБУЕМАЯ СПРАВКА:
+{description if description else "Не указана"}
+"""
+
+def get_worker_other_message(student_name, student_email, dormitory, room, date, time, description, appointment_id):
+    return f"""
+📋 НОВАЯ ЗАПИСЬ №{appointment_id}
+
+📅 Дата: {date}
+⏰ Время: {time}
+
+👤 СТУДЕНТ
+• ФИО: {student_name}
+• Email: {student_email}
+• Общежитие: {dormitory}
+• Комната: {room}
+
+📋 ВОПРОС: Другое
+
+📝 ОПИСАНИЕ ВОПРОСА:
+{description if description else "Не указано"}
+"""
+
+
+def send_notification_to_workers(student_name, student_email, dormitory, room, date, time, issue_type, description, appointment_id):
+    if issue_type == "Заселение в общежитие":
+        body = get_worker_check_in_message(student_name, student_email, dormitory, room, date, time, description, appointment_id)
+    elif issue_type == "Переселение в другое общежитие":
+        body = get_worker_relocation_message(student_name, student_email, dormitory, room, date, time, description, appointment_id)
+    elif issue_type == "Выселение из общежития":
+        body = get_worker_check_out_message(student_name, student_email, dormitory, room, date, time, description, appointment_id)
+    elif issue_type == "Заселение в МСГ (в т. ч. СПО)":
+        body = get_worker_msg_settlement_message(student_name, student_email, dormitory, room, date, time, description, appointment_id)
+    elif issue_type == "Временная регистрация":
+        body = get_worker_registration_message(student_name, student_email, dormitory, room, date, time, description, appointment_id)
+    elif issue_type == "Льготы":
+        body = get_worker_benefits_message(student_name, student_email, dormitory, room, date, time, description, appointment_id)
+    elif issue_type == "Справки":
+        body = get_worker_certificate_message(student_name, student_email, dormitory, room, date, time, description, appointment_id)
+    else: 
+        body = get_worker_other_message(student_name, student_email, dormitory, room, date, time, description, appointment_id)
+    
+    subject = f"🔔 НОВАЯ ЗАПИСЬ №{appointment_id}"
+    
     for worker_email in WORKER_EMAILS:
         send_email(worker_email, subject, body)
     return True
@@ -183,7 +542,6 @@ def validate_email(email):
     return re.match(pattern, email) is not None
 
 def get_next_available_date(target_day_code):
-    """Получает следующую доступную дату (включая сегодня)"""
     today = datetime.now().date()
     current_day = today.weekday()
     
@@ -318,7 +676,7 @@ def main():
                                 new_id = save_appointment(appointment_data)
                                 
                                 if new_id:
-                                    send_confirmation_to_student(email, fio, new_id, selected_date_display, st.session_state.selected_time, dormitory, type_map[issue_type_display])
+                                    send_confirmation_to_student(email, fio, new_id, selected_date_display, st.session_state.selected_time, dormitory, type_map[issue_type_display], description)
                                     send_notification_to_workers(fio, email, dormitory, room, selected_date_display, st.session_state.selected_time, type_map[issue_type_display], description, new_id)
                                     
                                     st.success(f"✅ Запись №{new_id} успешно создана! Подтверждение придет на вашу почту.")
