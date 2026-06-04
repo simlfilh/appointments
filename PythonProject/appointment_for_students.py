@@ -7,6 +7,13 @@ import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
+st.set_page_config(
+    page_title="Электронная запись в ЖБУ | Общежития СПбГЭУ",
+    page_icon="📆",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
+
 SUPABASE_URL = st.secrets["SUPABASE_URL"]
 SUPABASE_KEY = st.secrets["SUPABASE_KEY"]
 SMTP_EMAIL = st.secrets["SMTP_EMAIL"]
