@@ -212,7 +212,7 @@ def main():
         schedule_text = ""
         for day_key, day_info in SCHEDULE.items():
             if day_info["start"]:
-                schedule_text += f"- **{day_info['name']}:** {day_info['start']} — {day_info['end']} (каждые {day_info['slot_minutes']} мин)\n"
+                schedule_text += f"- **{day_info['name']}:** {day_info['start']} — {day_info['end']}\n"
         st.markdown(schedule_text)
 
     st.markdown("### Все записи на прием")
