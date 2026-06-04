@@ -726,47 +726,47 @@ def main():
         
         with col1:
             delete_email = st.text_input("Ваш email", key="delete_email")
+
+            if st.button("🔍 Показать мои записи", key="show_appointments"):
+                if delete_email and validate_email(delete_email):
+                    user_appointments = get_appointments_by_email(delete_email)
+                    if user_appointments:
+                        st.success(f"Найдено {len(user_appointments)} записей")
+                        
+                        # Создаем DataFrame для отображения
+                        df = pd.DataFrame(user_appointments)
+                        df_display = df[['id', 'date', 'time', 'issue_type', 'dormitory', 'room', 'status', 'description']]
+                        df_display.columns = ['ID', 'Дата', 'Время', 'Вопрос', 'Общежитие', 'Комната', 'Статус', 'Описание']
+                        st.dataframe(df_display, use_container_width=True, hide_index=True)
+                    else:
+                        st.warning("Записи не найдены")
+                else:
+                    st.error("Введите корректный email")
         
         with col2:
             delete_appointment_id = st.text_input("Номер записи", key="delete_id")
         
-        if st.button("🔍 Показать мои записи", key="show_appointments"):
-            if delete_email and validate_email(delete_email):
-                user_appointments = get_appointments_by_email(delete_email)
-                if user_appointments:
-                    st.success(f"Найдено {len(user_appointments)} записей")
-                    
-                    # Создаем DataFrame для отображения
-                    df = pd.DataFrame(user_appointments)
-                    df_display = df[['id', 'date', 'time', 'issue_type', 'dormitory', 'room', 'status', 'description']]
-                    df_display.columns = ['ID', 'Дата', 'Время', 'Вопрос', 'Общежитие', 'Комната', 'Статус', 'Описание']
-                    st.dataframe(df_display, use_container_width=True, hide_index=True)
+            if st.button("🗑️ Удалить запись", key="delete_button"):
+                if delete_email and delete_appointment_id:
+                    if not validate_email(delete_email):
+                        st.error("❌ Неверный формат email")
+                    else:
+                        try:
+                            appointment_id_int = int(delete_appointment_id)
+                            success, message = delete_appointment(appointment_id_int, delete_email)
+                            if success:
+                                st.success(f"✅ {message}")
+                                st.balloons()
+                                # Отправляем уведомление работникам об удалении
+                                notification_body = f"Запись №{appointment_id_int} была удалена пользователем {delete_email}"
+                                for worker_email in WORKER_EMAILS:
+                                    send_email(worker_email, f"🗑️ Запись №{appointment_id_int} удалена", notification_body)
+                            else:
+                                st.error(f"❌ {message}")
+                        except ValueError:
+                            st.error("❌ ID записи должен быть числом")
                 else:
-                    st.warning("Записи не найдены")
-            else:
-                st.error("Введите корректный email")
-        
-        if st.button("🗑️ Удалить запись", key="delete_button"):
-            if delete_email and delete_appointment_id:
-                if not validate_email(delete_email):
-                    st.error("❌ Неверный формат email")
-                else:
-                    try:
-                        appointment_id_int = int(delete_appointment_id)
-                        success, message = delete_appointment(appointment_id_int, delete_email)
-                        if success:
-                            st.success(f"✅ {message}")
-                            st.balloons()
-                            # Отправляем уведомление работникам об удалении
-                            notification_body = f"Запись №{appointment_id_int} была удалена пользователем {delete_email}"
-                            for worker_email in WORKER_EMAILS:
-                                send_email(worker_email, f"🗑️ Запись №{appointment_id_int} удалена", notification_body)
-                        else:
-                            st.error(f"❌ {message}")
-                    except ValueError:
-                        st.error("❌ ID записи должен быть числом")
-            else:
-                st.error("❌ Введите email и ID записи для удаления")
+                    st.error("❌ Введите email и ID записи для удаления")
 
 if __name__ == "__main__":
     main()
