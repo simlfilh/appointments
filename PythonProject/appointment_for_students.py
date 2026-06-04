@@ -6,6 +6,7 @@ import re
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+import time
 
 SUPABASE_URL = st.secrets["SUPABASE_URL"]
 SUPABASE_KEY = st.secrets["SUPABASE_KEY"]
@@ -110,6 +111,47 @@ def get_appointments_by_email(email):
     except Exception as e:
         st.error(f"Ошибка при получении заявок: {e}")
         return []
+
+def delete_appointment(appointment_id, appointment_email=None):
+    """Удаление записи по ID"""
+    try:
+        supabase = get_supabase()
+        
+        # Если указан email, проверяем, что запись принадлежит этому email
+        if appointment_email:
+            result = supabase.table('appointments').delete().eq('id', appointment_id).eq('email', appointment_email).execute()
+        else:
+            result = supabase.table('appointments').delete().eq('id', appointment_id).execute()
+        
+        if result.data:
+            return True, "Запись успешно удалена"
+        else:
+            return False, "Запись не найдена или у вас нет прав на её удаление"
+    except Exception as e:
+        return False, f"Ошибка при удалении: {str(e)}"
+
+def send_deletion_notification_to_workers(appointment_data):
+    """Отправка уведомления работникам об удалении записи"""
+    subject = f"🗑️ ЗАПИСЬ №{appointment_data['id']} УДАЛЕНА"
+    body = f"""
+Была удалена следующая запись на прием:
+
+📋 ЗАПИСЬ №{appointment_data['id']}
+👤 Студент: {appointment_data['fio']}
+📧 Email: {appointment_data['email']}
+🏠 Общежитие: {appointment_data['dormitory']}
+🚪 Комната: {appointment_data['room']}
+📅 Дата: {appointment_data['date']}
+⏰ Время: {appointment_data['time']}
+❓ Вопрос: {appointment_data['issue_type']}
+📝 Описание: {appointment_data['description']}
+📌 Статус: УДАЛЕНА
+
+Запись была удалена студентом.
+"""
+    
+    for worker_email in WORKER_EMAILS:
+        send_email(worker_email, subject, body)
 
 def send_email(to_email, subject, body):
     try:
@@ -516,7 +558,6 @@ def get_worker_other_message(student_name, student_email, dormitory, room, date,
 {description if description else "Не указано"}
 """
 
-
 def send_notification_to_workers(student_name, student_email, dormitory, room, date, time, issue_type, description, appointment_id):
     if issue_type == "Заселение в общежитие":
         body = get_worker_check_in_message(student_name, student_email, dormitory, room, date, time, description, appointment_id)
@@ -573,6 +614,12 @@ def main():
         st.session_state.selected_time = None
     if "show_form" not in st.session_state:
         st.session_state.show_form = False
+    if "show_delete_confirm" not in st.session_state:
+        st.session_state.show_delete_confirm = False
+    if "delete_id" not in st.session_state:
+        st.session_state.delete_id = None
+    if "delete_email" not in st.session_state:
+        st.session_state.delete_email = None
     
     with st.expander("📅 Режим работы ЖБУ", expanded=True):
         st.markdown("""
@@ -716,11 +763,67 @@ def main():
                     
                     st.dataframe(df_display, use_container_width=True)
                     
-                    st.info("ℹ️ По всем вопросам по записи обращайтесь в ЖБУ. Отмена записи возможна только через сотрудника.")
+                    st.markdown("---")
+                    st.markdown("### 🗑️ Удаление записи")
+                    st.markdown("Выберите запись для удаления")
+                    
+                    if not appointments:
+                        st.warning("Нет записей для удаления")
+                    else:
+                        delete_id = st.selectbox("Выберите № записи для удаления", [app['id'] for app in appointments], key="delete_select_id")
+                        
+                        if st.button("🗑️ Удалить выбранную запись", key="delete_btn"):
+                            if delete_id:
+                                st.session_state.show_delete_confirm = True
+                                st.session_state.delete_id = delete_id
+                                st.session_state.delete_email = view_email
+                                st.rerun()
+                            else:
+                                st.error("❌ Нет записей для удаления")
+                        
+                        # Диалог подтверждения удаления
+                        if st.session_state.show_delete_confirm and st.session_state.delete_id:
+                            with st.container():
+                                st.warning(f"⚠️ Вы уверены, что хотите удалить запись №{st.session_state.delete_id}? Это действие невозможно отменить. Запись будет полностью удалена из базы данных.")
+                                
+                                col_yes, col_no = st.columns(2)
+                                
+                                with col_yes:
+                                    if st.button("✅ Да, удалить", key="confirm_delete_final"):
+                                        success, message = delete_appointment(st.session_state.delete_id, st.session_state.delete_email)
+                                        if success:
+                                            # Получаем данные записи для уведомления работников
+                                            appointments_list = get_appointments_by_email(st.session_state.delete_email)
+                                            for app in appointments_list:
+                                                if app['id'] == st.session_state.delete_id:
+                                                    send_deletion_notification_to_workers(app)
+                                                    break
+                                            
+                                            st.success(f"✅ {message}")
+                                            st.session_state.show_delete_confirm = False
+                                            st.session_state.delete_id = None
+                                            st.session_state.delete_email = None
+                                            time.sleep(1)
+                                            st.rerun()
+                                        else:
+                                            st.error(f"❌ {message}")
+                                            st.session_state.show_delete_confirm = False
+                                            st.session_state.delete_id = None
+                                            st.session_state.delete_email = None
+                                            st.rerun()
+                                
+                                with col_no:
+                                    if st.button("❌ Отмена", key="cancel_delete_final"):
+                                        st.session_state.show_delete_confirm = False
+                                        st.session_state.delete_id = None
+                                        st.session_state.delete_email = None
+                                        st.rerun()
                 else:
                     st.warning("Записи не найдены")
             else:
                 st.error("Введите корректный email")
+        
+        st.info("ℹ️ По всем вопросам по записи обращайтесь в ЖБУ.")
 
 if __name__ == "__main__":
     main()
