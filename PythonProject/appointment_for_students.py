@@ -624,8 +624,8 @@ def main():
             st.markdown(f"### Шаг 2: Выберите время")
             
             selected_date = get_next_available_date(day_info["day_code"])
-            selected_date_str = selected_date.strftime("%d.%m.%Y")
-            selected_date_display = selected_date.strftime("%d.%m.%Y")
+            selected_date_str = selected_date.strftime("%Y-%m-%d")  # ✅ Для БД
+            selected_date_display = selected_date.strftime("%d.%m.%Y")  # ✅ Для отображения
             
             if selected_date == datetime.now().date():
                 st.info(f"📅 Вы выбрали: **{day_info['display']}** СЕГОДНЯ ({selected_date_display})")
