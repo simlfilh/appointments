@@ -6,6 +6,7 @@ from io import BytesIO
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+import time
 
 SUPABASE_URL = st.secrets["SUPABASE_URL"]
 SUPABASE_KEY = st.secrets["SUPABASE_KEY"]
@@ -50,6 +51,86 @@ def update_appointment_status(appointment_id, new_status):
     except Exception as e:
         st.error(f"Ошибка при обновлении статуса: {e}")
         return None
+
+def delete_appointment(appointment_id):
+    """Удаление записи по ID"""
+    try:
+        supabase = get_supabase()
+        
+        # Получаем данные записи перед удалением для уведомления
+        response = supabase.table('appointments').select('*').eq('id', appointment_id).execute()
+        if response.data:
+            appointment_data = response.data[0]
+            
+            # Удаляем запись
+            supabase.table('appointments').delete().eq('id', appointment_id).execute()
+            
+            # Отправляем уведомление работникам
+            send_deletion_notification_to_workers(appointment_data)
+            
+            return True, f"Запись №{appointment_id} успешно удалена"
+        else:
+            return False, "Запись не найдена"
+    except Exception as e:
+        return False, f"Ошибка при удалении: {str(e)}"
+
+def send_deletion_notification_to_workers(appointment_data):
+    """Отправка уведомления работникам об удалении записи"""
+    subject = f"🗑️ ЗАПИСЬ №{appointment_data['id']} УДАЛЕНА"
+    body = f"""
+Была удалена следующая запись на прием:
+
+📋 ЗАПИСЬ №{appointment_data['id']}
+👤 Студент: {appointment_data['fio']}
+📧 Email: {appointment_data['email']}
+🏠 Общежитие: {appointment_data['dormitory']}
+🚪 Комната: {appointment_data['room']}
+📅 Дата: {appointment_data['date']}
+⏰ Время: {appointment_data['time']}
+❓ Вопрос: {appointment_data['issue_type']}
+📝 Описание: {appointment_data['description']}
+📌 Статус: УДАЛЕНА
+
+Запись была удалена из системы.
+"""
+    WORKER_EMAILS = [
+        "valeraforumsch@gmail.com"
+    ]
+    
+    for worker_email in WORKER_EMAILS:
+        try:
+            msg = MIMEMultipart()
+            msg["From"] = SMTP_EMAIL
+            msg["To"] = worker_email
+            msg["Subject"] = subject
+            msg.attach(MIMEText(body, "plain", "utf-8"))
+            
+            server = smtplib.SMTP("smtp.gmail.com", 587)
+            server.starttls()
+            server.login(SMTP_EMAIL, SMTP_PASSWORD)
+            server.send_message(msg)
+            server.quit()
+        except Exception as e:
+            print(f"Ошибка отправки уведомления работнику {worker_email}: {e}")
+
+def send_deletion_notification_to_student(appointment_data):
+    """Отправка уведомления студенту об удалении записи"""
+    subject = f"❌ Ваша запись №{appointment_data['id']} была удалена"
+    body = f"""
+Здравствуйте, {appointment_data['fio']}!
+
+К сожалению, ваша запись на прием была удалена администратором.
+
+📅 Дата: {appointment_data['date']}
+⏰ Время: {appointment_data['time']}
+❓ Вопрос: {appointment_data['issue_type']}
+
+Если у вас есть вопросы, пожалуйста, обратитесь в Жилищно-бытовое управление.
+
+С уважением,
+Администрация Жилищно-бытового управления СПбГЭУ
+"""
+    return send_email(appointment_data['email'], subject, body)
 
 def update_schedule(new_schedule):
     global SCHEDULE
@@ -100,6 +181,10 @@ def main():
 
     if "authenticated" not in st.session_state:
         st.session_state.authenticated = False
+    if "show_delete_confirm" not in st.session_state:
+        st.session_state.show_delete_confirm = False
+    if "delete_id" not in st.session_state:
+        st.session_state.delete_id = None
 
     if not st.session_state.authenticated:
         with st.form("login_form"):
@@ -226,6 +311,50 @@ def main():
             st.rerun()
         else:
             st.error("❌ Ошибка при обновлении статуса")
+    
+    st.markdown("---")
+    st.markdown("### 🗑️ Удаление записи")
+    
+    if not filtered_df.empty:
+        delete_id = st.selectbox("Выберите ID записи для удаления", filtered_df["ID"].tolist(), key="delete_select_id")
+    else:
+        delete_id = None
+        st.warning("Нет записей для удаления")
+    
+    if st.button("🗑️ Удалить выбранную запись", key="delete_btn"):
+        if delete_id:
+            st.session_state.show_delete_confirm = True
+            st.session_state.delete_id = delete_id
+        else:
+            st.error("❌ Нет записей для удаления")
+    
+    # Диалог подтверждения удаления
+    if st.session_state.show_delete_confirm:
+        with st.container():
+            st.warning(f"⚠️ Вы уверены, что хотите удалить запись №{st.session_state.delete_id}? Это действие невозможно отменить. Запись будет полностью удалена из базы данных.")
+            
+            col_yes, col_no = st.columns(2)
+            
+            with col_yes:
+                if st.button("✅ Удалить", key="confirm_delete_final"):
+                    success, message = delete_appointment(st.session_state.delete_id)
+                    if success:
+                        st.success(f"✅ {message}")
+                        st.session_state.show_delete_confirm = False
+                        st.session_state.delete_id = None
+                        time.sleep(1)
+                        st.rerun()
+                    else:
+                        st.error(f"❌ {message}")
+                        st.session_state.show_delete_confirm = False
+                        st.session_state.delete_id = None
+                        st.rerun()
+            
+            with col_no:
+                if st.button("❌ Отмена", key="cancel_delete_final"):
+                    st.session_state.show_delete_confirm = False
+                    st.session_state.delete_id = None
+                    st.rerun()
     
     st.markdown("---")
     st.markdown("### 📥 Экспорт данных")
