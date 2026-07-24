@@ -202,45 +202,45 @@ def get_check_in_message(student_name, appointment_id, date, time, dormitory):
 Администрация Жилищно-бытового управления СПбГЭУ
 """
 
-def get_relocation_message(student_name, appointment_id, date, time, dormitory):
-    consent_form_url = "https://unecon.ru/wp-content/uploads/2022/05/obrazec_soglasiya_dlya_roditeley_opekunov_0.pdf"
-    info_url = "https://kosigina19k2.streamlit.app/settling"
+# def get_relocation_message(student_name, appointment_id, date, time, dormitory):
+#     consent_form_url = "https://unecon.ru/wp-content/uploads/2022/05/obrazec_soglasiya_dlya_roditeley_opekunov_0.pdf"
+#     info_url = "https://kosigina19k2.streamlit.app/settling"
     
-    return f"""
-Здравствуйте, {student_name}!
+#     return f"""
+# Здравствуйте, {student_name}!
 
-Ваша запись на переселение в другое общежитие успешно создана.
+# Ваша запись на переселение в другое общежитие успешно создана.
 
-📅 Дата: {date}
-⏰ Время: {time}
-🏠 {dormitory}
-📋 Вопрос: Переселение 
+# 📅 Дата: {date}
+# ⏰ Время: {time}
+# 🏠 {dormitory}
+# 📋 Вопрос: Переселение 
 
-Статус: Запланировано
+# Статус: Запланировано
 
-Для рассмотрения вопроса о переселении внутри своего общежития обратитесь к заведующему общежитием, в котором вы проживаете.
+# Для рассмотрения вопроса о переселении внутри своего общежития обратитесь к заведующему общежитием, в котором вы проживаете.
 
-Для рассмотрения вопроса о переселении из одного общежития в другое общежитие, при себе необходимо иметь:
+# Для рассмотрения вопроса о переселении из одного общежития в другое общежитие, при себе необходимо иметь:
 
-1. Для граждан Российской Федерации:
-• Копия паспорта с регистрацией по месту жительства;
-• Копия медицинской справки с результатами флюорографического обследования;
-• 1 фото формата 3х4;
-• Для несовершеннолетних студентов: оригинал нотариально заверенного согласия родителей (опекунов) на заключение договора найма жилого помещения в общежитии (образец заявления: {consent_form_url});
-• Документы и копии документов, подтверждающих льготы, указанные в ч. 5 ст. 36 Федерального закона от 29 декабря 2012 г. №273-ФЗ "Об образовании в Российской Федерации" (при наличии).
+# 1. Для граждан Российской Федерации:
+# • Копия паспорта с регистрацией по месту жительства;
+# • Копия медицинской справки с результатами флюорографического обследования;
+# • 1 фото формата 3х4;
+# • Для несовершеннолетних студентов: оригинал нотариально заверенного согласия родителей (опекунов) на заключение договора найма жилого помещения в общежитии (образец заявления: {consent_form_url});
+# • Документы и копии документов, подтверждающих льготы, указанные в ч. 5 ст. 36 Федерального закона от 29 декабря 2012 г. №273-ФЗ "Об образовании в Российской Федерации" (при наличии).
 
-2. Для граждан иностранных государств:
-• Для несовершеннолетних студентов: оригинал нотариально заверенного согласия родителей (опекунов) на заключение договора найма жилого помещения в общежитии (образец заявления);
-• Паспорт (с нотариально заверенным переводом на русский язык либо переводом, заверенным подписью руководителя Управления международного сотрудничества и печатью);
-• Копия медицинской справки с результатами флюорографического обследования.
+# 2. Для граждан иностранных государств:
+# • Для несовершеннолетних студентов: оригинал нотариально заверенного согласия родителей (опекунов) на заключение договора найма жилого помещения в общежитии (образец заявления);
+# • Паспорт (с нотариально заверенным переводом на русский язык либо переводом, заверенным подписью руководителя Управления международного сотрудничества и печатью);
+# • Копия медицинской справки с результатами флюорографического обследования.
 
-Дополнительная информация доступна по ссылке: {info_url}.
+# Дополнительная информация доступна по ссылке: {info_url}.
 
-Ждем вас в кабинете №5.
+# Ждем вас в кабинете №5.
 
-С уважением,
-Администрация Жилищно-бытового управления СПбГЭУ
-"""
+# С уважением,
+# Администрация Жилищно-бытового управления СПбГЭУ
+# """
 
 def get_check_out_message(student_name, appointment_id, date, time, dormitory):
     return f"""
@@ -381,8 +381,8 @@ def get_other_message(student_name, appointment_id, date, time, dormitory, descr
 def send_confirmation_to_student(student_email, student_name, appointment_id, date, time, dormitory, issue_type, description=""):
     if issue_type == "Заселение в общежитие":
         body = get_check_in_message(student_name, appointment_id, date, time, dormitory)
-    elif issue_type == "Переселение в другое общежитие":
-        body = get_relocation_message(student_name, appointment_id, date, time, dormitory)
+    # elif issue_type == "Переселение в другое общежитие":
+    #     body = get_relocation_message(student_name, appointment_id, date, time, dormitory)
     elif issue_type == "Выселение из общежития":
         body = get_check_out_message(student_name, appointment_id, date, time, dormitory)
     elif issue_type == "Заселение в МСГ (в т. ч. СПО)":
@@ -418,24 +418,24 @@ def get_worker_check_in_message(student_name, student_email, dormitory, room, da
 {description if description else "Не указана"}
 """
 
-def get_worker_relocation_message(student_name, student_email, dormitory, room, date, time, description, appointment_id):
-    return f"""
-📋 НОВАЯ ЗАПИСЬ НА ПЕРЕСЕЛЕНИЕ №{appointment_id}
+# def get_worker_relocation_message(student_name, student_email, dormitory, room, date, time, description, appointment_id):
+#     return f"""
+# 📋 НОВАЯ ЗАПИСЬ НА ПЕРЕСЕЛЕНИЕ №{appointment_id}
 
-📅 Дата: {date}
-⏰ Время: {time}
+# 📅 Дата: {date}
+# ⏰ Время: {time}
 
-👤 СТУДЕНТ
-• ФИО: {student_name}
-• Email: {student_email}
-• Текущее общежитие: {dormitory}
-• Комната: {room}
+# 👤 СТУДЕНТ
+# • ФИО: {student_name}
+# • Email: {student_email}
+# • Текущее общежитие: {dormitory}
+# • Комната: {room}
 
-📋 ВОПРОС: Переселение в другое общежитие
+# 📋 ВОПРОС: Переселение в другое общежитие
 
-📝 ПРИЧИНА ПЕРЕСЕЛЕНИЯ:
-{description if description else "Не указана"}
-"""
+# 📝 ПРИЧИНА ПЕРЕСЕЛЕНИЯ:
+# {description if description else "Не указана"}
+# """
 
 def get_worker_check_out_message(student_name, student_email, dormitory, room, date, time, description, appointment_id):
     return f"""
@@ -554,8 +554,8 @@ def get_worker_other_message(student_name, student_email, dormitory, room, date,
 def send_notification_to_workers(student_name, student_email, dormitory, room, date, time, issue_type, description, appointment_id):
     if issue_type == "Заселение в общежитие":
         body = get_worker_check_in_message(student_name, student_email, dormitory, room, date, time, description, appointment_id)
-    elif issue_type == "Переселение в другое общежитие":
-        body = get_worker_relocation_message(student_name, student_email, dormitory, room, date, time, description, appointment_id)
+    # elif issue_type == "Переселение в другое общежитие":
+    #     body = get_worker_relocation_message(student_name, student_email, dormitory, room, date, time, description, appointment_id)
     elif issue_type == "Выселение из общежития":
         body = get_worker_check_out_message(student_name, student_email, dormitory, room, date, time, description, appointment_id)
     elif issue_type == "Заселение в МСГ (в т. ч. СПО)":
@@ -694,7 +694,7 @@ def main():
                     
                     type_map = {
                         "Заселение в общежитие": "Заселение в общежитие",
-                        "Переселение в другое общежитие": "Переселение в другое общежитие",
+                        # "Переселение в другое общежитие": "Переселение в другое общежитие",
                         "Выселение из общежития": "Выселение из общежития",
                         "Заселение в МСГ (в т. ч. СПО)": "Заселение в МСГ (в т. ч. СПО)",
                         "Временная регистрация": "Временная регистрация",
