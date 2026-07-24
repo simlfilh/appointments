@@ -658,17 +658,26 @@ def main():
             st.markdown("**Доступное время:**")
             
             time_slots = day_info["time_slots"]
-            time_cols = st.columns(5)
-            for idx, time_slot in enumerate(time_slots):
-                col_idx = idx % 5
-                with time_cols[col_idx]:
-                    if time_slot in booked_slots:
-                        st.button(f"❌ {time_slot}", disabled=True, key=f"time_{day_key}_{time_slot}", use_container_width=True)
-                    else:
-                        if st.button(f"🟢 {time_slot}", key=f"time_{day_key}_{time_slot}", use_container_width=True):
-                            st.session_state.selected_time = time_slot
-                            st.session_state.show_form = True
-                            st.rerun()
+            slots_per_row = 5
+            
+            # Разбиваем слоты на строки по 5 штук
+            for row_idx in range(0, len(time_slots), slots_per_row):
+                row_slots = time_slots[row_idx:row_idx + slots_per_row]
+                cols = st.columns(len(row_slots))  # Создаем столбцы для каждой строки
+                
+                for col_idx, time_slot in enumerate(row_slots):
+                    with cols[col_idx]:
+                        if time_slot in booked_slots:
+                            st.button(f"❌ {time_slot}", disabled=True, 
+                                     key=f"time_{day_key}_{time_slot}", 
+                                     use_container_width=True)
+                        else:
+                            if st.button(f"🟢 {time_slot}", 
+                                       key=f"time_{day_key}_{time_slot}", 
+                                       use_container_width=True):
+                                st.session_state.selected_time = time_slot
+                                st.session_state.show_form = True
+                                st.rerun()
 
             # Форма для записи 
             if st.session_state.show_form and st.session_state.selected_time:
