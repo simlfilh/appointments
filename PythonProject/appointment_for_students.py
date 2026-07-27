@@ -601,7 +601,7 @@ def main():
             # Разбиваем слоты на строки по 5 штук
             for row_idx in range(0, len(time_slots), slots_per_row):
                 row_slots = time_slots[row_idx:row_idx + slots_per_row]
-                cols = st.columns(len(row_slots))  # Создаем столбцы для каждой строки
+                cols = st.columns(len(row_slots))
                 
                 for col_idx, time_slot in enumerate(row_slots):
                     with cols[col_idx]:
@@ -622,7 +622,7 @@ def main():
                 st.markdown(f"### Шаг 3: Заполните данные для записи на {st.session_state.selected_time}")
                 
                 with st.form("appointment_form"):
-                    # 🔥 НОВЫЙ ВЫБОР: Студент или Абитуриент
+                    # 🔥 ВЫБОР: Студент или Абитуриент
                     user_type = st.radio(
                         "Вы кто? *",
                         ["🎓 Студент", "📚 Абитуриент"],
@@ -635,7 +635,7 @@ def main():
                                           placeholder="example@mail.ru",
                                           help="На этот email придет подтверждение записи")
                     
-                    # Показываем поля для студента
+                    # Показываем поля только для студента
                     if user_type == "🎓 Студент":
                         dormitory = st.selectbox("Выберите общежитие *", DORMITORIES)
                         room = st.text_input("Номер блока/комнаты *", placeholder="Например: 101")
