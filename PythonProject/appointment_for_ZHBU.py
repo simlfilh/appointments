@@ -450,6 +450,9 @@ def main():
                 for i in range(len(edit_df)):
                     st.session_state[checkbox_key][i] = False
                 st.rerun()
+
+            if st.button("🔄 Обновить данные", use_container_width=True):
+                st.rerun()
         
         with col2:
             new_status_bulk = st.selectbox(
@@ -527,10 +530,6 @@ def main():
                         st.session_state.show_bulk_delete_confirm = False
                         st.session_state.bulk_delete_ids = []
                         st.rerun()
-        
-        # Отдельная кнопка для обновления
-        if st.button("🔄 Обновить данные", use_container_width=True):
-            st.rerun()
         
         st.markdown("---")
         st.markdown("### 📥 Экспорт данных")
