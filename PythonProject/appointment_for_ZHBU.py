@@ -236,7 +236,7 @@ def safe_format_date(date_value):
         return str(date_value)
 
 def main():
-    col, col0 = st.columns([5, 2])
+    col, col0 = st.columns([6, 2])
     
     with col:
         st.title("🔐 Панель сотрудника ЖБУ | Управление записью на прием")
@@ -268,7 +268,7 @@ def main():
         return
 
     with col0:
-        if st.button("🚪 Выйти"):
+        if st.button("🚪 Выйти", use_container_width=True):
             st.session_state.authenticated = False
             st.rerun()
 
