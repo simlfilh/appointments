@@ -635,8 +635,8 @@ def main():
                 st.session_state.user_type = user_type
                 
                 with st.form("appointment_form"):
-                    fio = st.text_input("Ваше ФИО *")
-                    email = st.text_input("Email для связи *", 
+                    fio = st.text_input("Ваше ФИО")
+                    email = st.text_input("Email для связи", 
                                           placeholder="example@mail.ru",
                                           help="На этот email придет подтверждение записи")
                     
@@ -645,8 +645,8 @@ def main():
                     room = None
                     
                     if st.session_state.user_type == "🎓 Студент":
-                        dormitory = st.selectbox("Выберите общежитие *", DORMITORIES)
-                        room = st.text_input("Номер блока/комнаты *", placeholder="Например: 101")
+                        dormitory = st.selectbox("Выберите общежитие", DORMITORIES)
+                        room = st.text_input("Номер блока/комнаты", placeholder="Например: 101")
                     else:  # Абитуриент
                         st.markdown("")
                     
@@ -659,9 +659,9 @@ def main():
                         "Справки": "Справки",
                         "Другое": "Другое"
                     }
-                    issue_type_display = st.selectbox("Тип вопроса *", list(type_map.keys()))
+                    issue_type_display = st.selectbox("Тип вопроса", list(type_map.keys()))
                     
-                    description = st.text_area("Подробное описание вопроса *", height=150)
+                    description = st.text_area("Подробное описание вопроса", height=150)
                     
                     submitted = st.form_submit_button("✅ Подтвердить запись")
                     
