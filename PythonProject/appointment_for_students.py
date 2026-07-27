@@ -623,17 +623,16 @@ def main():
             if st.session_state.show_form and st.session_state.selected_time:
                 st.markdown(f"### Шаг 3: Заполните данные для записи на {st.session_state.selected_time}")
                 
-                # 🔥 ВЫБОР СТАТУСА ВНЕ ФОРМЫ
+                # 🔥 ВЫБОР СТАТУСА с обновлением через session_state
                 user_type = st.radio(
                     "Вы кто? *",
                     ["🎓 Студент", "📚 Абитуриент"],
                     horizontal=True,
                     key="user_type_radio",
-                    help="Выберите ваш статус",
-                    on_change=lambda: st.rerun()  # Обновляем страницу при смене
+                    help="Выберите ваш статус"
                 )
                 
-                # Сохраняем в session_state
+                # Сохраняем в session_state для использования в форме
                 st.session_state.user_type = user_type
                 
                 with st.form("appointment_form"):
@@ -642,11 +641,11 @@ def main():
                                           placeholder="example@mail.ru",
                                           help="На этот email придет подтверждение записи")
                     
-                    # 👇👇👇 УСЛОВНОЕ ОТОБРАЖЕНИЕ ПОЛЕЙ 👇👇👇
+                    # 👇👇👇 УСЛОВНОЕ ОТОБРАЖЕНИЕ ПОЛЕЙ через session_state 👇👇👇
                     dormitory = None
                     room = None
                     
-                    if user_type == "🎓 Студент":
+                    if st.session_state.user_type == "🎓 Студент":
                         dormitory = st.selectbox("Выберите общежитие *", DORMITORIES)
                         room = st.text_input("Номер блока/комнаты *", placeholder="Например: 101")
                     else:  # Абитуриент
@@ -675,7 +674,7 @@ def main():
                         elif not validate_email(email):
                             st.error("❌ Пожалуйста, введите корректный email адрес")
                         # Для студента проверяем общежитие и комнату
-                        elif user_type == "🎓 Студент" and (not dormitory or not room):
+                        elif st.session_state.user_type == "🎓 Студент" and (not dormitory or not room):
                             st.error("❌ Для студентов обязательны поля 'Общежитие' и 'Комната'")
                         else:
                             appointment_data = {
@@ -683,7 +682,7 @@ def main():
                                 "time": st.session_state.selected_time,
                                 "fio": fio,
                                 "email": email,
-                                "user_type": "Студент" if user_type == "🎓 Студент" else "Абитуриент",
+                                "user_type": "Студент" if st.session_state.user_type == "🎓 Студент" else "Абитуриент",
                                 "dormitory": dormitory,
                                 "room": room,
                                 "issue_type": type_map[issue_type_display],
@@ -702,7 +701,7 @@ def main():
                                     )
                                     send_notification_to_workers(
                                         fio, email, 
-                                        "Студент" if user_type == "🎓 Студент" else "Абитуриент",
+                                        "Студент" if st.session_state.user_type == "🎓 Студент" else "Абитуриент",
                                         dormitory, room, selected_date_display, 
                                         st.session_state.selected_time, 
                                         type_map[issue_type_display], 
