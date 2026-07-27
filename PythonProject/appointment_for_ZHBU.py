@@ -7,7 +7,6 @@ import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 import time
-import re
 
 st.set_page_config(
     page_title="Управление электронной записью | Общежития СПбГЭУ",
@@ -89,10 +88,10 @@ def send_deletion_notification_to_workers(appointment_data):
 Была удалена следующая запись на прием:
 
 📋 ЗАПИСЬ №{appointment_data['id']}
-👤 {appointment_data['user_type']}: {appointment_data['fio']}
+👤 Студент: {appointment_data['fio']}
 📧 Email: {appointment_data['email']}
-🏠 Общежитие: {appointment_data.get('dormitory', 'Не указано')}
-🚪 Комната: {appointment_data.get('room', 'Не указана')}
+🏠 Общежитие: {appointment_data['dormitory']}
+🚪 Комната: {appointment_data['room']}
 📅 Дата: {appointment_data['date']}
 ⏰ Время: {appointment_data['time']}
 ❓ Вопрос: {appointment_data['issue_type']}
@@ -120,6 +119,29 @@ def send_deletion_notification_to_workers(appointment_data):
             server.quit()
         except Exception as e:
             print(f"Ошибка отправки уведомления работнику {worker_email}: {e}")
+
+def send_deletion_notification_to_student(appointment_data):
+    """Отправка уведомления студенту об удалении записи"""
+    subject = f"❌ Ваша запись №{appointment_data['id']} была удалена"
+    body = f"""
+Здравствуйте, {appointment_data['fio']}!
+
+К сожалению, ваша запись на прием была удалена администратором.
+
+📅 Дата: {appointment_data['date']}
+⏰ Время: {appointment_data['time']}
+❓ Вопрос: {appointment_data['issue_type']}
+
+Если у вас есть вопросы, пожалуйста, обратитесь в Жилищно-бытовое управление.
+
+С уважением,
+Администрация Жилищно-бытового управления СПбГЭУ
+"""
+    return send_email(appointment_data['email'], subject, body)
+
+def update_schedule(new_schedule):
+    global SCHEDULE
+    SCHEDULE = new_schedule
 
 def send_email(to_email, subject, body):
     try:
@@ -275,7 +297,6 @@ def main():
         "time": "Время",
         "fio": "ФИО",
         "email": "Email",
-        "user_type": "Тип",
         "dormitory": "Общежитие",
         "room": "Комната",
         "issue_type": "Вопрос",
@@ -283,16 +304,12 @@ def main():
         "status": "Статус"
     })
     
-    # Заполняем пустые значения для абитуриентов
-    display_df["Общежитие"] = display_df["Общежитие"].fillna("Не указано")
-    display_df["Комната"] = display_df["Комната"].fillna("Не указана")
-    
     # Приводим даты к формату дд.мм.гггг для отображения
     display_df["Дата"] = pd.to_datetime(display_df["Дата"]).dt.strftime("%d.%m.%Y")
     
     # Фильтры
     st.subheader("🔍 Фильтры")
-    col1, col2, col3, col4 = st.columns(4)
+    col1, col2, col3 = st.columns(3)
     with col1:
         date_filter = st.selectbox("Фильтр по дате", ["Все", "Сегодня", "Завтра", "Выбрать дату"])
     with col2:
@@ -301,8 +318,6 @@ def main():
         type_options = ["Все", "Заселение в общежитие", "Переселение в другое общежитие", "Выселение из общежития",
                         "Заселение в МСГ (в т. ч. СПО)", "Временная регистрация", "Льготы", "Справки", "Другое"]
         type_filter = st.selectbox("Фильтр по типу вопроса", type_options)
-    with col4:
-        user_type_filter = st.selectbox("Фильтр по типу", ["Все", "Студент", "Абитуриент"])
     
     # Применяем фильтры
     filtered_df = display_df.copy()
@@ -323,20 +338,15 @@ def main():
     if type_filter != "Все":
         filtered_df = filtered_df[filtered_df["Вопрос"] == type_filter]
     
-    if user_type_filter != "Все":
-        filtered_df = filtered_df[filtered_df["Тип"] == user_type_filter]
-    
     # Метрики
-    col1, col2, col3, col4, col5 = st.columns(5)
+    col1, col2, col3, col4 = st.columns(4)
     with col1:
         st.metric("Всего в фильтре", len(filtered_df))
     with col2:
-        st.metric("Студенты", len(filtered_df[filtered_df["Тип"] == "Студент"]))
-    with col3:
-        st.metric("Абитуриенты", len(filtered_df[filtered_df["Тип"] == "Абитуриент"]))
-    with col4:
         st.metric("Запланировано", len(filtered_df[filtered_df["Статус"] == "Запланировано"]))
-    with col5:
+    with col3:
+        st.metric("Подтверждено", len(filtered_df[filtered_df["Статус"] == "Подтверждено"]))
+    with col4:
         st.metric("Выполнено", len(filtered_df[filtered_df["Статус"] == "Выполнено"]))
     
     st.markdown("---")
@@ -367,7 +377,6 @@ def main():
                 default=False,
             ),
             "ID": st.column_config.NumberColumn("№", width="small"),
-            "Тип": st.column_config.TextColumn("Тип", width="small"),
             "Статус": st.column_config.TextColumn("Статус", width="small"),
             "Дата": st.column_config.TextColumn("Дата", width="small"),
             "Время": st.column_config.TextColumn("Время", width="small"),
@@ -385,7 +394,7 @@ def main():
             use_container_width=True,
             hide_index=True,
             column_config=column_config,
-            disabled=["ID", "Дата", "Время", "ФИО", "Email", "Тип", "Общежитие", "Комната", "Вопрос", "Описание", "Статус"],
+            disabled=["ID", "Дата", "Время", "ФИО", "Email", "Общежитие", "Комната", "Вопрос", "Описание", "Статус"],
             key="appointments_data_editor"
         )
         
