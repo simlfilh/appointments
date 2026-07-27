@@ -459,35 +459,34 @@ def main():
                 label_visibility="collapsed"
             )
         
-        col1, col2 = st.columns(2)
-        
-        with col1:
             if st.button(f"🔄 Изменить статус ({len(selected_ids)})", use_container_width=True):
-                if not selected_ids:
-                    st.warning("Выберите хотя бы одну запись")
-                else:
-                    success_count = 0
-                    for id in selected_ids:
-                        appointment = update_appointment_status(id, new_status_bulk)
-                        if appointment:
-                            send_status_notification(
-                                appointment["email"], 
-                                appointment["fio"], 
-                                id, 
-                                appointment["date"], 
-                                appointment["time"], 
-                                new_status_bulk
-                            )
-                            success_count += 1
-                    if success_count > 0:
-                        st.success(f"✅ Статус изменен для {success_count} записей")
-                        # Сбрасываем чекбоксы
-                        for i in range(len(edit_df)):
-                            st.session_state[checkbox_key][i] = False
-                        time.sleep(1)
-                        st.rerun()
+                    if not selected_ids:
+                        st.warning("Выберите хотя бы одну запись")
                     else:
-                        st.error("❌ Ошибка при обновлении статусов")
+                        success_count = 0
+                        for id in selected_ids:
+                            appointment = update_appointment_status(id, new_status_bulk)
+                            if appointment:
+                                send_status_notification(
+                                    appointment["email"], 
+                                    appointment["fio"], 
+                                    id, 
+                                    appointment["date"], 
+                                    appointment["time"], 
+                                    new_status_bulk
+                                )
+                                success_count += 1
+                        if success_count > 0:
+                            st.success(f"✅ Статус изменен для {success_count} записей")
+                            # Сбрасываем чекбоксы
+                            for i in range(len(edit_df)):
+                                st.session_state[checkbox_key][i] = False
+                            time.sleep(1)
+                            st.rerun()
+                        else:
+                            st.error("❌ Ошибка при обновлении статусов")  
+                        
+        col1, col2 = st.columns(2)
         
         with col2:
             if st.button(f"🗑️ Удалить выбранные ({len(selected_ids)})", use_container_width=True, type="primary"):
