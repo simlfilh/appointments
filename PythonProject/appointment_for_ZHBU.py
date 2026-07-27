@@ -438,7 +438,7 @@ def main():
         # Кнопки управления
         st.markdown("### 🎯 Массовые операции")
         
-        col1, col2, col3 = st.columns([1, 1, 2])
+        col1, col2 = st.columns(2)
         
         with col1:
             if st.button("✅ Выбрать все", use_container_width=True):
@@ -452,12 +452,6 @@ def main():
                 st.rerun()
         
         with col2:
-            if selected_ids:
-                st.info(f"Выбрано: {len(selected_ids)} записей")
-            else:
-                st.info("Выберите записи для операций")
-        
-        with col3:
             new_status_bulk = st.selectbox(
                 "Новый статус для выбранных",
                 ["Запланировано", "Подтверждено", "Выполнено", "Отменено"],
