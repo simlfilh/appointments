@@ -236,7 +236,7 @@ def safe_format_date(date_value):
         return str(date_value)
 
 def main():
-    col, col0 = st.columns([6, 2])
+    col, col0 = st.columns([6, 1])
     
     with col:
         st.title("🔐 Панель сотрудника ЖБУ | Управление записью на прием")
