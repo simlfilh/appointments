@@ -625,11 +625,10 @@ def main():
                 
                 # 🔥 ВЫБОР СТАТУСА с обновлением через session_state
                 user_type = st.radio(
-                    "Вы кто? *",
+                    "Выберите ваш статус",
                     ["🎓 Студент", "📚 Абитуриент"],
                     horizontal=True,
-                    key="user_type_radio",
-                    help="Выберите ваш статус"
+                    key="user_type_radio"
                 )
                 
                 # Сохраняем в session_state для использования в форме
