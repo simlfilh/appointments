@@ -236,7 +236,10 @@ def safe_format_date(date_value):
         return str(date_value)
 
 def main():
-    st.title("🔐 Панель сотрудника ЖБУ | Управление записью на прием")
+    col, col0 = st.columns([5, 2])
+    
+    with col:
+        st.title("🔐 Панель сотрудника ЖБУ | Управление записью на прием")
 
     if "authenticated" not in st.session_state:
         st.session_state.authenticated = False
@@ -263,10 +266,6 @@ def main():
                 else:
                     st.error("❌ Неверный пароль!")
         return
-
-    col, col0 = st.columns([2, 1])
-    with col:
-        st.success("✅ Вы вошли как сотрудник ЖБУ")
 
     with col0:
         if st.button("🚪 Выйти"):
