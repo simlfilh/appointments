@@ -179,8 +179,62 @@ def send_status_notification(student_email, student_name, appointment_id, date, 
 
 def to_excel(df):
     output = BytesIO()
+    
+    # Создаем копию DataFrame без столбцов, которые не нужны в Excel
+    df_to_export = df.copy()
+    # Удаляем столбец "Выбрать", если он есть
+    if 'Выбрать' in df_to_export.columns:
+        df_to_export = df_to_export.drop(columns=['Выбрать'])
+    
     with pd.ExcelWriter(output, engine='openpyxl') as writer:
-        df.to_excel(writer, index=False, sheet_name='Записи')
+        df_to_export.to_excel(writer, index=False, sheet_name='Записи')
+        
+        workbook = writer.book
+        worksheet = writer.sheets['Записи']
+        
+        from openpyxl.styles import Alignment
+        
+        # Автоматически определяем ширину столбцов
+        for column in worksheet.columns:
+            max_length = 0
+            column_letter = column[0].column_letter
+            for cell in column:
+                try:
+                    if cell.value:
+                        text_length = len(str(cell.value))
+                        if text_length > max_length:
+                            max_length = text_length
+                except:
+                    pass
+            adjusted_width = min(max_length + 2, 60)
+            worksheet.column_dimensions[column_letter].width = adjusted_width
+        
+        # Автоматическая высота строк
+        for row_idx in range(2, worksheet.max_row + 1):
+            max_height = 25
+            for col_letter in worksheet.column_dimensions:
+                cell = worksheet[f'{col_letter}{row_idx}']
+                if cell.value:
+                    text = str(cell.value)
+                    col_width = worksheet.column_dimensions[col_letter].width or 10
+                    chars_per_line = int(col_width * 1.2)
+                    lines = (len(text) // chars_per_line) + 1 if chars_per_line > 0 else 1
+                    height_needed = lines * 18
+                    if height_needed > max_height:
+                        max_height = min(height_needed, 150)
+            worksheet.row_dimensions[row_idx].height = max_height
+        
+        # Выравнивание для всех ячеек
+        for row in worksheet.iter_rows():
+            for cell in row:
+                cell.alignment = Alignment(
+                    horizontal='left',
+                    vertical='center',
+                    wrap_text=True
+                )
+        
+        worksheet.freeze_panes = 'A2'
+        
     return output.getvalue()
 
 def main():
@@ -192,6 +246,12 @@ def main():
         st.session_state.show_delete_confirm = False
     if "delete_id" not in st.session_state:
         st.session_state.delete_id = None
+    if "checkbox_state" not in st.session_state:
+        st.session_state.checkbox_state = {}
+    if "show_bulk_delete_confirm" not in st.session_state:
+        st.session_state.show_bulk_delete_confirm = False
+    if "bulk_delete_ids" not in st.session_state:
+        st.session_state.bulk_delete_ids = []
 
     if not st.session_state.authenticated:
         with st.form("login_form"):
@@ -230,6 +290,7 @@ def main():
         st.info("Пока нет ни одной записи")
         return
     
+    # Подготовка данных для отображения
     display_df = appointments_df.rename(columns={
         "id": "ID",
         "date": "Дата",
@@ -243,6 +304,11 @@ def main():
         "status": "Статус"
     })
     
+    # Приводим даты к формату дд.мм.гггг для отображения
+    display_df["Дата"] = pd.to_datetime(display_df["Дата"]).dt.strftime("%d.%m.%Y")
+    
+    # Фильтры
+    st.subheader("🔍 Фильтры")
     col1, col2, col3 = st.columns(3)
     with col1:
         date_filter = st.selectbox("Фильтр по дате", ["Все", "Сегодня", "Завтра", "Выбрать дату"])
@@ -253,9 +319,9 @@ def main():
                         "Заселение в МСГ (в т. ч. СПО)", "Временная регистрация", "Льготы", "Справки", "Другое"]
         type_filter = st.selectbox("Фильтр по типу вопроса", type_options)
     
+    # Применяем фильтры
     filtered_df = display_df.copy()
-
-    # 
+    
     today = datetime.now().date()
     if date_filter == "Сегодня":
         filtered_df = filtered_df[filtered_df["Дата"] == today.strftime("%d.%m.%Y")]
@@ -272,8 +338,7 @@ def main():
     if type_filter != "Все":
         filtered_df = filtered_df[filtered_df["Вопрос"] == type_filter]
     
-    st.info(f"📊 Найдено записей: {len(filtered_df)} из {len(display_df)}")
-    
+    # Метрики
     col1, col2, col3, col4 = st.columns(4)
     with col1:
         st.metric("Всего в фильтре", len(filtered_df))
@@ -283,105 +348,192 @@ def main():
         st.metric("Подтверждено", len(filtered_df[filtered_df["Статус"] == "Подтверждено"]))
     with col4:
         st.metric("Выполнено", len(filtered_df[filtered_df["Статус"] == "Выполнено"]))
-
-    if st.button("🔄 Обновить сейчас"):
-            st.rerun()
-        
-    st.dataframe(filtered_df, use_container_width=True, hide_index=True)
     
     st.markdown("---")
-    st.markdown("### Изменить статус записи")
     
-    col1, col2 = st.columns(2)
-    with col1:
-        if not filtered_df.empty:
-            selected_id = st.selectbox("Выберите ID записи", filtered_df["ID"].tolist())
-        else:
-            selected_id = None
-            st.warning("Нет записей для изменения")
-    
-    with col2:
-        new_status = st.selectbox("Новый статус", ["Запланировано", "Подтверждено", "Выполнено", "Отменено"])
-    
-    if st.button("📝 Обновить статус") and selected_id:
-        appointment = update_appointment_status(selected_id, new_status)
-        if appointment:
-            send_status_notification(
-                appointment["email"], 
-                appointment["fio"], 
-                selected_id, 
-                appointment["date"], 
-                appointment["time"], 
-                new_status
-            )
-            st.success(f"✅ Статус записи #{selected_id} изменен на '{new_status}', студент уведомлен")
-            st.rerun()
-        else:
-            st.error("❌ Ошибка при обновлении статуса")
-    
-    st.markdown("---")
-    st.markdown("### 🗑️ Удаление записи")
-    
+    # Создаем редактируемую таблицу
     if not filtered_df.empty:
-        delete_id = st.selectbox("Выберите ID записи для удаления", filtered_df["ID"].tolist(), key="delete_select_id")
-    else:
-        delete_id = None
-        st.warning("Нет записей для удаления")
-    
-    if st.button("🗑️ Удалить выбранную запись", key="delete_btn"):
-        if delete_id:
-            st.session_state.show_delete_confirm = True
-            st.session_state.delete_id = delete_id
-        else:
-            st.error("❌ Нет записей для удаления")
-    
-    # Диалог подтверждения удаления
-    if st.session_state.show_delete_confirm:
-        with st.container():
-            st.warning(f"⚠️ Вы уверены, что хотите удалить запись №{st.session_state.delete_id}? Это действие невозможно отменить. Запись будет полностью удалена из базы данных.")
+        # Добавляем чекбоксы для выбора
+        checkbox_key = "appointments_checkbox_state"
+        
+        if checkbox_key not in st.session_state:
+            st.session_state[checkbox_key] = {i: False for i in range(len(filtered_df))}
+        
+        edit_df = filtered_df.copy()
+        edit_df = edit_df.reset_index(drop=True)
+        
+        # Получаем значения чекбоксов
+        checkbox_values = []
+        for i in range(len(edit_df)):
+            checkbox_values.append(st.session_state[checkbox_key].get(i, False))
+        
+        edit_df.insert(0, "Выбрать", checkbox_values)
+        
+        # Настройка колонок для редактора
+        column_config = {
+            "Выбрать": st.column_config.CheckboxColumn(
+                "Выбрать",
+                help="Отметьте записи для массового управления",
+                default=False,
+            ),
+            "ID": st.column_config.NumberColumn("№", width="small"),
+            "Статус": st.column_config.TextColumn("Статус", width="small"),
+            "Дата": st.column_config.TextColumn("Дата", width="small"),
+            "Время": st.column_config.TextColumn("Время", width="small"),
+            "ФИО": st.column_config.TextColumn("ФИО", width="medium"),
+            "Email": st.column_config.TextColumn("Email", width="medium"),
+            "Общежитие": st.column_config.TextColumn("Общежитие", width="medium"),
+            "Комната": st.column_config.TextColumn("Комната", width="small"),
+            "Вопрос": st.column_config.TextColumn("Тип вопроса", width="medium"),
+            "Описание": st.column_config.TextColumn("Описание", width="large"),
+        }
+        
+        # Отображаем редактор
+        edited_df = st.data_editor(
+            edit_df,
+            use_container_width=True,
+            hide_index=True,
+            column_config=column_config,
+            disabled=["ID", "Дата", "Время", "ФИО", "Email", "Общежитие", "Комната", "Вопрос", "Описание", "Статус"],
+            key="appointments_data_editor"
+        )
+        
+        # Сохраняем состояние чекбоксов
+        for i in range(len(edited_df)):
+            st.session_state[checkbox_key][i] = edited_df.loc[i, "Выбрать"]
+        
+        # Получаем выбранные ID
+        selected_ids = []
+        for i in range(len(edited_df)):
+            if edited_df.loc[i, "Выбрать"]:
+                selected_ids.append(int(edit_df.loc[i, "ID"]))
+        
+        # Кнопки управления
+        st.markdown("### 🎯 Массовые операции")
+        
+        col1, col2, col3 = st.columns([1, 1, 2])
+        
+        with col1:
+            if st.button("✅ Выбрать все", use_container_width=True):
+                for i in range(len(edit_df)):
+                    st.session_state[checkbox_key][i] = True
+                st.rerun()
             
-            col_yes, col_no = st.columns(2)
-            
-            with col_yes:
-                if st.button("✅ Удалить", key="confirm_delete_final"):
-                    success, message = delete_appointment(st.session_state.delete_id)
-                    if success:
-                        st.success(f"✅ {message}")
-                        st.session_state.show_delete_confirm = False
-                        st.session_state.delete_id = None
+            if st.button("❌ Снять все", use_container_width=True):
+                for i in range(len(edit_df)):
+                    st.session_state[checkbox_key][i] = False
+                st.rerun()
+        
+        with col2:
+            if selected_ids:
+                st.info(f"Выбрано: {len(selected_ids)} записей")
+            else:
+                st.info("Выберите записи для операций")
+        
+        with col3:
+            new_status_bulk = st.selectbox(
+                "Новый статус для выбранных",
+                ["Запланировано", "Подтверждено", "Выполнено", "Отменено"],
+                key="bulk_status",
+                label_visibility="collapsed"
+            )
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            if st.button(f"🔄 Изменить статус ({len(selected_ids)})", use_container_width=True):
+                if not selected_ids:
+                    st.warning("Выберите хотя бы одну запись")
+                else:
+                    success_count = 0
+                    for id in selected_ids:
+                        appointment = update_appointment_status(id, new_status_bulk)
+                        if appointment:
+                            send_status_notification(
+                                appointment["email"], 
+                                appointment["fio"], 
+                                id, 
+                                appointment["date"], 
+                                appointment["time"], 
+                                new_status_bulk
+                            )
+                            success_count += 1
+                    if success_count > 0:
+                        st.success(f"✅ Статус изменен для {success_count} записей")
+                        # Сбрасываем чекбоксы
+                        for i in range(len(edit_df)):
+                            st.session_state[checkbox_key][i] = False
                         time.sleep(1)
                         st.rerun()
                     else:
-                        st.error(f"❌ {message}")
-                        st.session_state.show_delete_confirm = False
-                        st.session_state.delete_id = None
+                        st.error("❌ Ошибка при обновлении статусов")
+        
+        with col2:
+            if st.button(f"🗑️ Удалить выбранные ({len(selected_ids)})", use_container_width=True, type="primary"):
+                if not selected_ids:
+                    st.warning("Выберите хотя бы одну запись")
+                else:
+                    st.session_state.show_bulk_delete_confirm = True
+                    st.session_state.bulk_delete_ids = selected_ids
+        
+        # Диалог подтверждения массового удаления
+        if st.session_state.show_bulk_delete_confirm:
+            with st.container():
+                st.warning(f"⚠️ Вы уверены, что хотите удалить {len(st.session_state.bulk_delete_ids)} записей? Это действие невозможно отменить.")
+                
+                col_yes, col_no = st.columns(2)
+                
+                with col_yes:
+                    if st.button("✅ Да, удалить все", key="confirm_bulk_delete"):
+                        success_count = 0
+                        for id in st.session_state.bulk_delete_ids:
+                            success, _ = delete_appointment(id)
+                            if success:
+                                success_count += 1
+                        if success_count > 0:
+                            st.success(f"✅ Удалено записей: {success_count}")
+                            st.session_state.show_bulk_delete_confirm = False
+                            st.session_state.bulk_delete_ids = []
+                            # Сбрасываем чекбоксы
+                            for i in range(len(edit_df)):
+                                st.session_state[checkbox_key][i] = False
+                            time.sleep(1)
+                            st.rerun()
+                        else:
+                            st.error("❌ Ошибка при удалении")
+                
+                with col_no:
+                    if st.button("❌ Отмена", key="cancel_bulk_delete"):
+                        st.session_state.show_bulk_delete_confirm = False
+                        st.session_state.bulk_delete_ids = []
                         st.rerun()
-            
-            with col_no:
-                if st.button("❌ Отмена", key="cancel_delete_final"):
-                    st.session_state.show_delete_confirm = False
-                    st.session_state.delete_id = None
-                    st.rerun()
-    
-    st.markdown("---")
-    st.markdown("### 📥 Экспорт данных")
-    
-    export_type = st.radio(
-        "Что экспортировать?",
-        ["Все записи", "Только отфильтрованные"],
-        horizontal=True
-    )
-    
-    export_df = filtered_df if export_type == "Только отфильтрованные" else display_df
-    
-    excel_data = to_excel(export_df)
-    st.download_button(
-        label="📊 Скачать в Excel формате",
-        data=excel_data,
-        file_name=f"Электронная запись {datetime.now().strftime('%d.%m.%Y_%H:%M:%S')}.xlsx",
-        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        use_container_width=True
-    )
+        
+        # Отдельная кнопка для обновления
+        if st.button("🔄 Обновить данные", use_container_width=True):
+            st.rerun()
+        
+        st.markdown("---")
+        st.markdown("### 📥 Экспорт данных")
+        
+        export_type = st.radio(
+            "Что экспортировать?",
+            ["Все записи", "Только отфильтрованные"],
+            horizontal=True
+        )
+        
+        export_df = filtered_df if export_type == "Только отфильтрованные" else display_df
+        
+        excel_data = to_excel(export_df)
+        st.download_button(
+            label="📊 Скачать в Excel формате",
+            data=excel_data,
+            file_name=f"Электронная запись {datetime.now().strftime('%d.%m.%Y_%H:%M:%S')}.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            use_container_width=True
+        )
+        
+    else:
+        st.warning("Нет записей для отображения")
 
 if __name__ == "__main__":
     main()
