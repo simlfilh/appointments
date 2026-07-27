@@ -489,9 +489,7 @@ def main():
                         else:
                             st.error("❌ Ошибка при обновлении статусов")  
                         
-        col1, col2 = st.columns(2)
         
-        with col2:
             if st.button(f"🗑️ Удалить выбранные ({len(selected_ids)})", use_container_width=True, type="primary"):
                 if not selected_ids:
                     st.warning("Выберите хотя бы одну запись")
