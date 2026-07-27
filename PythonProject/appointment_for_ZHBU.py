@@ -529,6 +529,7 @@ def main():
         st.markdown("### 📥 Экспорт данных")
         
         export_type = st.radio(
+            "",
             ["Все записи", "Только отфильтрованные"],
             horizontal=True
         )
