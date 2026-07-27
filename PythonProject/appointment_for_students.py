@@ -635,14 +635,17 @@ def main():
                                           placeholder="example@mail.ru",
                                           help="На этот email придет подтверждение записи")
                     
-                    # Показываем поля только для студента
+                    # 👇👇👇 УСЛОВНОЕ ОТОБРАЖЕНИЕ ПОЛЕЙ 👇👇👇
+                    # Показываем поля ТОЛЬКО для студента
+                    dormitory = None
+                    room = None
+                    
                     if user_type == "🎓 Студент":
                         dormitory = st.selectbox("Выберите общежитие *", DORMITORIES)
                         room = st.text_input("Номер блока/комнаты *", placeholder="Например: 101")
                     else:  # Абитуриент
                         st.info("📌 Для абитуриентов поля 'Общежитие' и 'Комната' не требуются")
-                        dormitory = None
-                        room = None
+                    # 👆👆👆 КОНЕЦ УСЛОВНОГО ОТОБРАЖЕНИЯ 👆👆👆
                     
                     type_map = {
                         "Заселение в общежитие": "Заселение в общежитие",
@@ -665,9 +668,11 @@ def main():
                             st.error("❌ Пожалуйста, заполните все обязательные поля")
                         elif not validate_email(email):
                             st.error("❌ Пожалуйста, введите корректный email адрес")
+                        # 👇👇👇 ПРОВЕРКА ДЛЯ СТУДЕНТА 👇👇👇
                         # Для студента проверяем общежитие и комнату
                         elif user_type == "🎓 Студент" and (not dormitory or not room):
                             st.error("❌ Для студентов обязательны поля 'Общежитие' и 'Комната'")
+                        # 👆👆👆 КОНЕЦ ПРОВЕРКИ 👆👆👆
                         else:
                             appointment_data = {
                                 "date": selected_date_str,
