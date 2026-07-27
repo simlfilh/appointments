@@ -15,7 +15,7 @@ st.set_page_config(
 )
 
 # Ссылки для взаимодействия с базой данных, которая хранит:
-# id PK, дату и время подачи заявки на  запись, 
+# id PK, дату и время подачи заявки на запись, 
 # ФИО, email, общежитие, № блока студента, 
 # тип, описание и статус заявки.
 SUPABASE_URL = st.secrets["SUPABASE_URL"]
@@ -77,7 +77,7 @@ WORKER_EMAILS = [
     "valeraforumsch@gmail.com" # временный адрес, который потом станет dom@unecon.ru
 ]
 
-# Функция для оторажения времени и даты последнего обновления
+# Функция для отображения времени и даты последнего обновления
 def get_last_update_time():
     utc_now = datetime.now(timezone.utc)
     local_now = utc_now + timedelta(hours=3)
@@ -105,8 +105,9 @@ def save_appointment(data):
         "time": data["time"],
         "fio": data["fio"],
         "email": data["email"],
-        "dormitory": data["dormitory"],
-        "room": data["room"],
+        "user_type": data["user_type"],  # НОВОЕ ПОЛЕ
+        "dormitory": data.get("dormitory"),  # Может быть None для абитуриентов
+        "room": data.get("room"),  # Может быть None для абитуриентов
         "issue_type": data["issue_type"],
         "description": data["description"],
         "status": "Запланировано"
@@ -201,46 +202,6 @@ def get_check_in_message(student_name, appointment_id, date, time, dormitory):
 С уважением,
 Администрация Жилищно-бытового управления СПбГЭУ
 """
-
-# def get_relocation_message(student_name, appointment_id, date, time, dormitory):
-#     consent_form_url = "https://unecon.ru/wp-content/uploads/2022/05/obrazec_soglasiya_dlya_roditeley_opekunov_0.pdf"
-#     info_url = "https://kosigina19k2.streamlit.app/settling"
-    
-#     return f"""
-# Здравствуйте, {student_name}!
-
-# Ваша запись на переселение в другое общежитие успешно создана.
-
-# 📅 Дата: {date}
-# ⏰ Время: {time}
-# 🏠 {dormitory}
-# 📋 Вопрос: Переселение 
-
-# Статус: Запланировано
-
-# Для рассмотрения вопроса о переселении внутри своего общежития обратитесь к заведующему общежитием, в котором вы проживаете.
-
-# Для рассмотрения вопроса о переселении из одного общежития в другое общежитие, при себе необходимо иметь:
-
-# 1. Для граждан Российской Федерации:
-# • Копия паспорта с регистрацией по месту жительства;
-# • Копия медицинской справки с результатами флюорографического обследования;
-# • 1 фото формата 3х4;
-# • Для несовершеннолетних студентов: оригинал нотариально заверенного согласия родителей (опекунов) на заключение договора найма жилого помещения в общежитии (образец заявления: {consent_form_url});
-# • Документы и копии документов, подтверждающих льготы, указанные в ч. 5 ст. 36 Федерального закона от 29 декабря 2012 г. №273-ФЗ "Об образовании в Российской Федерации" (при наличии).
-
-# 2. Для граждан иностранных государств:
-# • Для несовершеннолетних студентов: оригинал нотариально заверенного согласия родителей (опекунов) на заключение договора найма жилого помещения в общежитии (образец заявления);
-# • Паспорт (с нотариально заверенным переводом на русский язык либо переводом, заверенным подписью руководителя Управления международного сотрудничества и печатью);
-# • Копия медицинской справки с результатами флюорографического обследования.
-
-# Дополнительная информация доступна по ссылке: {info_url}.
-
-# Ждем вас в кабинете №5.
-
-# С уважением,
-# Администрация Жилищно-бытового управления СПбГЭУ
-# """
 
 def get_check_out_message(student_name, appointment_id, date, time, dormitory):
     return f"""
@@ -381,8 +342,6 @@ def get_other_message(student_name, appointment_id, date, time, dormitory, descr
 def send_confirmation_to_student(student_email, student_name, appointment_id, date, time, dormitory, issue_type, description=""):
     if issue_type == "Заселение в общежитие":
         body = get_check_in_message(student_name, appointment_id, date, time, dormitory)
-    # elif issue_type == "Переселение в другое общежитие":
-    #     body = get_relocation_message(student_name, appointment_id, date, time, dormitory)
     elif issue_type == "Выселение из общежития":
         body = get_check_out_message(student_name, appointment_id, date, time, dormitory)
     elif issue_type == "Заселение в МСГ (в т. ч. СПО)":
@@ -399,18 +358,18 @@ def send_confirmation_to_student(student_email, student_name, appointment_id, da
     subject = f"✅ Запись на прием №{appointment_id} подтверждена"
     return send_email(student_email, subject, body)
 
-def get_worker_check_in_message(student_name, student_email, dormitory, room, date, time, description, appointment_id):
+def get_worker_check_in_message(student_name, student_email, user_type, dormitory, room, date, time, description, appointment_id):
     return f"""
 📋 НОВАЯ ЗАПИСЬ НА ЗАСЕЛЕНИЕ №{appointment_id}
 
 📅 Дата: {date}
 ⏰ Время: {time}
 
-👤 СТУДЕНТ
+👤 {user_type}
 • ФИО: {student_name}
 • Email: {student_email}
-• Общежитие: {dormitory}
-• Комната: {room}
+• Общежитие: {dormitory if dormitory else "Не указано"}
+• Комната: {room if room else "Не указана"}
 
 📋 ВОПРОС: Заселение в общежитие
 
@@ -418,37 +377,18 @@ def get_worker_check_in_message(student_name, student_email, dormitory, room, da
 {description if description else "Не указана"}
 """
 
-# def get_worker_relocation_message(student_name, student_email, dormitory, room, date, time, description, appointment_id):
-#     return f"""
-# 📋 НОВАЯ ЗАПИСЬ НА ПЕРЕСЕЛЕНИЕ №{appointment_id}
-
-# 📅 Дата: {date}
-# ⏰ Время: {time}
-
-# 👤 СТУДЕНТ
-# • ФИО: {student_name}
-# • Email: {student_email}
-# • Текущее общежитие: {dormitory}
-# • Комната: {room}
-
-# 📋 ВОПРОС: Переселение в другое общежитие
-
-# 📝 ПРИЧИНА ПЕРЕСЕЛЕНИЯ:
-# {description if description else "Не указана"}
-# """
-
-def get_worker_check_out_message(student_name, student_email, dormitory, room, date, time, description, appointment_id):
+def get_worker_check_out_message(student_name, student_email, user_type, dormitory, room, date, time, description, appointment_id):
     return f"""
 📋 НОВАЯ ЗАПИСЬ НА ВЫСЕЛЕНИЕ №{appointment_id}
 
 📅 Дата: {date}
 ⏰ Время: {time}
 
-👤 СТУДЕНТ
+👤 {user_type}
 • ФИО: {student_name}
 • Email: {student_email}
-• Общежитие: {dormitory}
-• Комната: {room}
+• Общежитие: {dormitory if dormitory else "Не указано"}
+• Комната: {room if room else "Не указана"}
 
 📋 ВОПРОС: Выселение из общежития
 
@@ -456,18 +396,18 @@ def get_worker_check_out_message(student_name, student_email, dormitory, room, d
 {description if description else "Не указана"}
 """
 
-def get_worker_msg_settlement_message(student_name, student_email, dormitory, room, date, time, description, appointment_id):
+def get_worker_msg_settlement_message(student_name, student_email, user_type, dormitory, room, date, time, description, appointment_id):
     return f"""
 📋 НОВАЯ ЗАПИСЬ В МСГ №{appointment_id}
 
 📅 Дата: {date}
 ⏰ Время: {time}
 
-👤 СТУДЕНТ
+👤 {user_type}
 • ФИО: {student_name}
 • Email: {student_email}
-• Общежитие: {dormitory}
-• Комната: {room}
+• Общежитие: {dormitory if dormitory else "Не указано"}
+• Комната: {room if room else "Не указана"}
 
 📋 ВОПРОС: Заселение в МСГ (в т. ч. СПО)
 
@@ -475,18 +415,18 @@ def get_worker_msg_settlement_message(student_name, student_email, dormitory, ro
 {description if description else "Не указана"}
 """
 
-def get_worker_registration_message(student_name, student_email, dormitory, room, date, time, description, appointment_id):
+def get_worker_registration_message(student_name, student_email, user_type, dormitory, room, date, time, description, appointment_id):
     return f"""
 📋 НОВАЯ ЗАПИСЬ НА ВРЕМЕННУЮ РЕГИСТРАЦИЮ №{appointment_id}
 
 📅 Дата: {date}
 ⏰ Время: {time}
 
-👤 СТУДЕНТ
+👤 {user_type}
 • ФИО: {student_name}
 • Email: {student_email}
-• Общежитие: {dormitory}
-• Комната: {room}
+• Общежитие: {dormitory if dormitory else "Не указано"}
+• Комната: {room if room else "Не указана"}
 
 📋 ВОПРОС: Временная регистрация
 
@@ -494,18 +434,18 @@ def get_worker_registration_message(student_name, student_email, dormitory, room
 {description if description else "Не указана"}
 """
 
-def get_worker_benefits_message(student_name, student_email, dormitory, room, date, time, description, appointment_id):
+def get_worker_benefits_message(student_name, student_email, user_type, dormitory, room, date, time, description, appointment_id):
     return f"""
 📋 НОВАЯ ЗАПИСЬ ПО ЛЬГОТАМ №{appointment_id}
 
 📅 Дата: {date}
 ⏰ Время: {time}
 
-👤 СТУДЕНТ
+👤 {user_type}
 • ФИО: {student_name}
 • Email: {student_email}
-• Общежитие: {dormitory}
-• Комната: {room}
+• Общежитие: {dormitory if dormitory else "Не указано"}
+• Комната: {room if room else "Не указана"}
 
 📋 ВОПРОС: Льготы
 
@@ -513,18 +453,18 @@ def get_worker_benefits_message(student_name, student_email, dormitory, room, da
 {description if description else "Не указаны"}
 """
 
-def get_worker_certificate_message(student_name, student_email, dormitory, room, date, time, description, appointment_id):
+def get_worker_certificate_message(student_name, student_email, user_type, dormitory, room, date, time, description, appointment_id):
     return f"""
 📋 НОВАЯ ЗАПИСЬ НА СПРАВКУ №{appointment_id}
 
 📅 Дата: {date}
 ⏰ Время: {time}
 
-👤 СТУДЕНТ
+👤 {user_type}
 • ФИО: {student_name}
 • Email: {student_email}
-• Общежитие: {dormitory}
-• Комната: {room}
+• Общежитие: {dormitory if dormitory else "Не указано"}
+• Комната: {room if room else "Не указана"}
 
 📋 ВОПРОС: Справки
 
@@ -532,18 +472,18 @@ def get_worker_certificate_message(student_name, student_email, dormitory, room,
 {description if description else "Не указана"}
 """
 
-def get_worker_other_message(student_name, student_email, dormitory, room, date, time, description, appointment_id):
+def get_worker_other_message(student_name, student_email, user_type, dormitory, room, date, time, description, appointment_id):
     return f"""
 📋 НОВАЯ ЗАПИСЬ №{appointment_id}
 
 📅 Дата: {date}
 ⏰ Время: {time}
 
-👤 СТУДЕНТ
+👤 {user_type}
 • ФИО: {student_name}
 • Email: {student_email}
-• Общежитие: {dormitory}
-• Комната: {room}
+• Общежитие: {dormitory if dormitory else "Не указано"}
+• Комната: {room if room else "Не указана"}
 
 📋 ВОПРОС: Другое
 
@@ -551,23 +491,21 @@ def get_worker_other_message(student_name, student_email, dormitory, room, date,
 {description if description else "Не указано"}
 """
 
-def send_notification_to_workers(student_name, student_email, dormitory, room, date, time, issue_type, description, appointment_id):
+def send_notification_to_workers(student_name, student_email, user_type, dormitory, room, date, time, issue_type, description, appointment_id):
     if issue_type == "Заселение в общежитие":
-        body = get_worker_check_in_message(student_name, student_email, dormitory, room, date, time, description, appointment_id)
-    # elif issue_type == "Переселение в другое общежитие":
-    #     body = get_worker_relocation_message(student_name, student_email, dormitory, room, date, time, description, appointment_id)
+        body = get_worker_check_in_message(student_name, student_email, user_type, dormitory, room, date, time, description, appointment_id)
     elif issue_type == "Выселение из общежития":
-        body = get_worker_check_out_message(student_name, student_email, dormitory, room, date, time, description, appointment_id)
+        body = get_worker_check_out_message(student_name, student_email, user_type, dormitory, room, date, time, description, appointment_id)
     elif issue_type == "Заселение в МСГ (в т. ч. СПО)":
-        body = get_worker_msg_settlement_message(student_name, student_email, dormitory, room, date, time, description, appointment_id)
+        body = get_worker_msg_settlement_message(student_name, student_email, user_type, dormitory, room, date, time, description, appointment_id)
     elif issue_type == "Временная регистрация":
-        body = get_worker_registration_message(student_name, student_email, dormitory, room, date, time, description, appointment_id)
+        body = get_worker_registration_message(student_name, student_email, user_type, dormitory, room, date, time, description, appointment_id)
     elif issue_type == "Льготы":
-        body = get_worker_benefits_message(student_name, student_email, dormitory, room, date, time, description, appointment_id)
+        body = get_worker_benefits_message(student_name, student_email, user_type, dormitory, room, date, time, description, appointment_id)
     elif issue_type == "Справки":
-        body = get_worker_certificate_message(student_name, student_email, dormitory, room, date, time, description, appointment_id)
+        body = get_worker_certificate_message(student_name, student_email, user_type, dormitory, room, date, time, description, appointment_id)
     else: 
-        body = get_worker_other_message(student_name, student_email, dormitory, room, date, time, description, appointment_id)
+        body = get_worker_other_message(student_name, student_email, user_type, dormitory, room, date, time, description, appointment_id)
     
     subject = f"🔔 НОВАЯ ЗАПИСЬ №{appointment_id}"
     
@@ -684,17 +622,30 @@ def main():
                 st.markdown(f"### Шаг 3: Заполните данные для записи на {st.session_state.selected_time}")
                 
                 with st.form("appointment_form"):
+                    # 🔥 НОВЫЙ ВЫБОР: Студент или Абитуриент
+                    user_type = st.radio(
+                        "Вы кто? *",
+                        ["🎓 Студент", "📚 Абитуриент"],
+                        horizontal=True,
+                        help="Выберите ваш статус"
+                    )
+                    
                     fio = st.text_input("Ваше ФИО *")
                     email = st.text_input("Email для связи *", 
                                           placeholder="example@mail.ru",
                                           help="На этот email придет подтверждение записи")
                     
-                    dormitory = st.selectbox("Выберите общежитие *", DORMITORIES)
-                    room = st.text_input("Номер блока/комнаты *")
+                    # Показываем поля для студента
+                    if user_type == "🎓 Студент":
+                        dormitory = st.selectbox("Выберите общежитие *", DORMITORIES)
+                        room = st.text_input("Номер блока/комнаты *", placeholder="Например: 101")
+                    else:  # Абитуриент
+                        st.info("📌 Для абитуриентов поля 'Общежитие' и 'Комната' не требуются")
+                        dormitory = None
+                        room = None
                     
                     type_map = {
                         "Заселение в общежитие": "Заселение в общежитие",
-                        # "Переселение в другое общежитие": "Переселение в другое общежитие",
                         "Выселение из общежития": "Выселение из общежития",
                         "Заселение в МСГ (в т. ч. СПО)": "Заселение в МСГ (в т. ч. СПО)",
                         "Временная регистрация": "Временная регистрация",
@@ -709,16 +660,21 @@ def main():
                     submitted = st.form_submit_button("✅ Подтвердить запись")
                     
                     if submitted:
-                        if not fio or not email or not room or not description:
-                            st.error("❌ Пожалуйста, заполните все поля")
+                        # Проверяем обязательные поля
+                        if not fio or not email or not description:
+                            st.error("❌ Пожалуйста, заполните все обязательные поля")
                         elif not validate_email(email):
                             st.error("❌ Пожалуйста, введите корректный email адрес")
+                        # Для студента проверяем общежитие и комнату
+                        elif user_type == "🎓 Студент" and (not dormitory or not room):
+                            st.error("❌ Для студентов обязательны поля 'Общежитие' и 'Комната'")
                         else:
                             appointment_data = {
                                 "date": selected_date_str,
                                 "time": st.session_state.selected_time,
                                 "fio": fio,
                                 "email": email,
+                                "user_type": "Студент" if user_type == "🎓 Студент" else "Абитуриент",
                                 "dormitory": dormitory,
                                 "room": room,
                                 "issue_type": type_map[issue_type_display],
@@ -728,8 +684,21 @@ def main():
                                 new_id = save_appointment(appointment_data)
                                 
                                 if new_id:
-                                    send_confirmation_to_student(email, fio, new_id, selected_date_display, st.session_state.selected_time, dormitory, type_map[issue_type_display], description)
-                                    send_notification_to_workers(fio, email, dormitory, room, selected_date_display, st.session_state.selected_time, type_map[issue_type_display], description, new_id)
+                                    send_confirmation_to_student(
+                                        email, fio, new_id, selected_date_display, 
+                                        st.session_state.selected_time, 
+                                        dormitory if dormitory else "Не указано", 
+                                        type_map[issue_type_display], 
+                                        description
+                                    )
+                                    send_notification_to_workers(
+                                        fio, email, 
+                                        "Студент" if user_type == "🎓 Студент" else "Абитуриент",
+                                        dormitory, room, selected_date_display, 
+                                        st.session_state.selected_time, 
+                                        type_map[issue_type_display], 
+                                        description, new_id
+                                    )
                                     
                                     st.success(f"✅ Запись №{new_id} успешно создана! Подтверждение придет на вашу почту.")
                                     st.balloons()
@@ -762,8 +731,13 @@ def main():
                         
                         # Создаем DataFrame для отображения
                         df = pd.DataFrame(user_appointments)
-                        df_display = df[['id', 'date', 'time', 'issue_type', 'dormitory', 'room', 'status', 'description']]
-                        df_display.columns = ['ID', 'Дата', 'Время', 'Вопрос', 'Общежитие', 'Комната', 'Статус', 'Описание']
+                        # Добавляем поле user_type, если его нет
+                        if 'user_type' not in df.columns:
+                            df['user_type'] = 'Студент'
+                        df_display = df[['id', 'date', 'time', 'user_type', 'issue_type', 'dormitory', 'room', 'status', 'description']]
+                        df_display.columns = ['ID', 'Дата', 'Время', 'Тип', 'Вопрос', 'Общежитие', 'Комната', 'Статус', 'Описание']
+                        df_display['Общежитие'] = df_display['Общежитие'].fillna('Не указано')
+                        df_display['Комната'] = df_display['Комната'].fillna('Не указана')
                         st.dataframe(df_display, use_container_width=True, hide_index=True)
                     else:
                         st.warning("Записи не найдены")
