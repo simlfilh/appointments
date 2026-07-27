@@ -493,37 +493,37 @@ def main():
                     st.session_state.show_bulk_delete_confirm = True
                     st.session_state.bulk_delete_ids = selected_ids
         
-        # Диалог подтверждения массового удаления
-        if st.session_state.show_bulk_delete_confirm:
-            with st.container():
-                st.warning(f"⚠️ Вы уверены, что хотите удалить {len(st.session_state.bulk_delete_ids)} записей? Это действие невозможно отменить.")
-                
-                col_yes, col_no = st.columns(2)
-                
-                with col_yes:
-                    if st.button("✅ Да, удалить все", key="confirm_bulk_delete"):
-                        success_count = 0
-                        for id in st.session_state.bulk_delete_ids:
-                            success, _ = delete_appointment(id)
-                            if success:
-                                success_count += 1
-                        if success_count > 0:
-                            st.success(f"✅ Удалено записей: {success_count}")
+            # Диалог подтверждения массового удаления
+            if st.session_state.show_bulk_delete_confirm:
+                with st.container():
+                    st.warning(f"⚠️ Вы уверены, что хотите удалить {len(st.session_state.bulk_delete_ids)} записей? Это действие невозможно отменить.")
+                    
+                    col_yes, col_no = st.columns(2)
+                    
+                    with col_yes:
+                        if st.button("✅ Да, удалить все", key="confirm_bulk_delete"):
+                            success_count = 0
+                            for id in st.session_state.bulk_delete_ids:
+                                success, _ = delete_appointment(id)
+                                if success:
+                                    success_count += 1
+                            if success_count > 0:
+                                st.success(f"✅ Удалено записей: {success_count}")
+                                st.session_state.show_bulk_delete_confirm = False
+                                st.session_state.bulk_delete_ids = []
+                                # Сбрасываем чекбоксы
+                                for i in range(len(edit_df)):
+                                    st.session_state[checkbox_key][i] = False
+                                time.sleep(1)
+                                st.rerun()
+                            else:
+                                st.error("❌ Ошибка при удалении")
+                    
+                    with col_no:
+                        if st.button("❌ Отмена", key="cancel_bulk_delete"):
                             st.session_state.show_bulk_delete_confirm = False
                             st.session_state.bulk_delete_ids = []
-                            # Сбрасываем чекбоксы
-                            for i in range(len(edit_df)):
-                                st.session_state[checkbox_key][i] = False
-                            time.sleep(1)
                             st.rerun()
-                        else:
-                            st.error("❌ Ошибка при удалении")
-                
-                with col_no:
-                    if st.button("❌ Отмена", key="cancel_bulk_delete"):
-                        st.session_state.show_bulk_delete_confirm = False
-                        st.session_state.bulk_delete_ids = []
-                        st.rerun()
         
         st.markdown("---")
         st.markdown("### 📥 Экспорт данных")
