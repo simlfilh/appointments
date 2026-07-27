@@ -435,9 +435,6 @@ def main():
             if edited_df.loc[i, "Выбрать"]:
                 selected_ids.append(int(edit_df.loc[i, "ID"]))
         
-        # Кнопки управления
-        st.markdown("### 🎯 Массовые операции")
-        
         col1, col2 = st.columns(2)
         
         with col1:
