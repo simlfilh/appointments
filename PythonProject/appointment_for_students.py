@@ -548,6 +548,8 @@ def main():
         st.session_state.selected_time = None
     if "show_form" not in st.session_state:
         st.session_state.show_form = False
+    if "user_type" not in st.session_state:
+        st.session_state.user_type = "🎓 Студент"  # Значение по умолчанию
     
     with st.expander("📅 Режим работы ЖБУ", expanded=True):
         st.markdown("""
@@ -621,22 +623,26 @@ def main():
             if st.session_state.show_form and st.session_state.selected_time:
                 st.markdown(f"### Шаг 3: Заполните данные для записи на {st.session_state.selected_time}")
                 
+                # 🔥 ВЫБОР СТАТУСА ВНЕ ФОРМЫ
+                user_type = st.radio(
+                    "Вы кто? *",
+                    ["🎓 Студент", "📚 Абитуриент"],
+                    horizontal=True,
+                    key="user_type_radio",
+                    help="Выберите ваш статус",
+                    on_change=lambda: st.rerun()  # Обновляем страницу при смене
+                )
+                
+                # Сохраняем в session_state
+                st.session_state.user_type = user_type
+                
                 with st.form("appointment_form"):
-                    # 🔥 ВЫБОР: Студент или Абитуриент
-                    user_type = st.radio(
-                        "Вы кто? *",
-                        ["🎓 Студент", "📚 Абитуриент"],
-                        horizontal=True,
-                        help="Выберите ваш статус"
-                    )
-                    
                     fio = st.text_input("Ваше ФИО *")
                     email = st.text_input("Email для связи *", 
                                           placeholder="example@mail.ru",
                                           help="На этот email придет подтверждение записи")
                     
                     # 👇👇👇 УСЛОВНОЕ ОТОБРАЖЕНИЕ ПОЛЕЙ 👇👇👇
-                    # Показываем поля ТОЛЬКО для студента
                     dormitory = None
                     room = None
                     
@@ -668,11 +674,9 @@ def main():
                             st.error("❌ Пожалуйста, заполните все обязательные поля")
                         elif not validate_email(email):
                             st.error("❌ Пожалуйста, введите корректный email адрес")
-                        # 👇👇👇 ПРОВЕРКА ДЛЯ СТУДЕНТА 👇👇👇
                         # Для студента проверяем общежитие и комнату
                         elif user_type == "🎓 Студент" and (not dormitory or not room):
                             st.error("❌ Для студентов обязательны поля 'Общежитие' и 'Комната'")
-                        # 👆👆👆 КОНЕЦ ПРОВЕРКИ 👆👆👆
                         else:
                             appointment_data = {
                                 "date": selected_date_str,
