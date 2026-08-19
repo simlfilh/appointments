@@ -775,5 +775,21 @@ def main():
                 else:
                     st.error("❌ Введите email и ID записи для удаления")
 
+st.markdown("---")
+st.markdown("### 🛠 Техническая поддержка")
+    
+col1, col2 = st.columns(2)
+with col1:
+    st.markdown("""
+    📧 **Email:** savchenko.va@unecon.ru
+        
+    📞 **Телефон:** 8 (812) 458-97-30 доб. 4299
+
+        
+    🕐 **Часы работы технической поддержки:**
+        
+    ПН-ВТ: 11:00 – 17:00
+    """)
+
 if __name__ == "__main__":
     main()
