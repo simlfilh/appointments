@@ -244,7 +244,7 @@ def main():
             submitted = st.form_submit_button("Войти")
 
             if submitted:
-                if password_input == PASSWORD:
+                if password_input == SMTP_PASSWORD:
                     st.session_state.authenticated = True
                     st.rerun()
                 else:
