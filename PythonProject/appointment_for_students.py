@@ -14,10 +14,6 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Ссылки для взаимодействия с базой данных, которая хранит:
-# id PK, дату и время подачи заявки на запись, 
-# ФИО, email, общежитие, № блока студента, 
-# тип, описание и статус заявки.
 SUPABASE_URL = st.secrets["SUPABASE_URL"]
 SUPABASE_KEY = st.secrets["SUPABASE_KEY"]
 SMTP_EMAIL = st.secrets["SMTP_EMAIL"]
@@ -30,7 +26,7 @@ DORMITORIES = [
     "Общежитие №7 | ул. Воронежская, д. 38"
 ]
 
-# Доступные даты для записи
+
 AVAILABLE_DAYS = {
     "ПН": {
         "day_code": 0, 
@@ -77,7 +73,6 @@ WORKER_EMAILS = [
     "valeraforumsch@gmail.com" # временный адрес, который потом станет dom@unecon.ru
 ]
 
-# Функция для отображения времени и даты последнего обновления
 def get_last_update_time():
     utc_now = datetime.now(timezone.utc)
     local_now = utc_now + timedelta(hours=3)
@@ -86,7 +81,6 @@ def get_last_update_time():
 def get_supabase():
     return create_client(SUPABASE_URL, SUPABASE_KEY)
 
-# Функция для возвращения списка всех занятых временных слотов для указанной даты
 def get_booked_slots_for_date(date_str):
     try:
         supabase = get_supabase()
@@ -97,7 +91,6 @@ def get_booked_slots_for_date(date_str):
     except Exception:
         return []
 
-# Функция для сохранения и извлечения записи
 def save_appointment(data):
     supabase = get_supabase()
     result = supabase.table('appointments').insert({
@@ -105,9 +98,9 @@ def save_appointment(data):
         "time": data["time"],
         "fio": data["fio"],
         "email": data["email"],
-        "user_type": data["user_type"],  # НОВОЕ ПОЛЕ
-        "dormitory": data.get("dormitory"),  # Может быть None для абитуриентов
-        "room": data.get("room"),  # Может быть None для абитуриентов
+        "user_type": data["user_type"],  
+        "dormitory": data.get("dormitory"), 
+        "room": data.get("room"),
         "issue_type": data["issue_type"],
         "description": data["description"],
         "status": "Запланировано"
@@ -116,7 +109,6 @@ def save_appointment(data):
         return result.data[0]['id']
     return None
 
-# Функция для получения списка записей за все время
 def get_appointments_by_email(email):
     try:
         supabase = get_supabase()
@@ -128,12 +120,10 @@ def get_appointments_by_email(email):
         st.error(f"Ошибка при получении записей: {e}")
         return []
 
-# Функция удаления записи по №
 def delete_appointment(appointment_id, appointment_email=None):
     try:
         supabase = get_supabase()
         
-        # Если указан email, проверяем, что запись принадлежит этому email
         if appointment_email:
             result = supabase.table('appointments').delete().eq('id', appointment_id).eq('email', appointment_email).execute()
         else:
@@ -146,7 +136,6 @@ def delete_appointment(appointment_id, appointment_email=None):
     except Exception as e:
         return False, f"Ошибка при удалении: {str(e)}"
 
-# Функция для автоматической рассылки уведомлений на email-ы сотрудника и студента
 def send_email(to_email, subject, body):
     try:
         msg = MIMEMultipart()
@@ -513,12 +502,10 @@ def send_notification_to_workers(student_name, student_email, user_type, dormito
         send_email(worker_email, subject, body)
     return True
 
-# Функция для проверки корректности email адреса
 def validate_email(email):
     pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
     return re.match(pattern, email) is not None
 
-# Функция для вычисления ближайшей будущей даты для заданного дня недели
 def get_next_available_date(target_day_code):
     today = datetime.now().date()
     current_day = today.weekday()
@@ -531,7 +518,7 @@ def get_next_available_date(target_day_code):
         days_ahead = 7
     return today + timedelta(days=days_ahead)
 
-# Интерфейс студента
+
 def main():
     last_update_time, last_update_date = get_last_update_time()
     
@@ -549,7 +536,7 @@ def main():
     if "show_form" not in st.session_state:
         st.session_state.show_form = False
     if "user_type" not in st.session_state:
-        st.session_state.user_type = "🎓 Студент"  # Значение по умолчанию
+        st.session_state.user_type = "🎓 Студент" 
     
     with st.expander("📅 Режим работы ЖБУ", expanded=True):
         st.markdown("""
@@ -561,16 +548,13 @@ def main():
         - **Пятница:** 13:00 — 15:00
         """)
 
-    # Вкладки для записи на прием и управления записями
     tab1, tab2 = st.tabs(["📝 Записаться на прием", "🗑️ Управление записями"])
 
-    # Поэтапная запись на прием
     with tab1:
         st.markdown("### Шаг 1: Выберите день недели")
         
         day_cols = st.columns(4)
 
-        # Выбор дня недели
         for i, (day_key, day_info) in enumerate(AVAILABLE_DAYS.items()):
             with day_cols[i]:
                 if st.button(f"📅 {day_info['display']}", key=f"day_{day_key}", use_container_width=True):
@@ -579,14 +563,13 @@ def main():
                     st.session_state.show_form = False
                     st.rerun()
 
-        # Выбор доступного времени для записи на прием
         if st.session_state.selected_day:
             day_info = AVAILABLE_DAYS[st.session_state.selected_day]
             st.markdown(f"### Шаг 2: Выберите время")
             
             selected_date = get_next_available_date(day_info["day_code"])
-            selected_date_str = selected_date.strftime("%Y-%m-%d")  # Для БД
-            selected_date_display = selected_date.strftime("%d.%m.%Y")  # Для отображения
+            selected_date_str = selected_date.strftime("%Y-%m-%d") 
+            selected_date_display = selected_date.strftime("%d.%m.%Y")  
             
             if selected_date == datetime.now().date():
                 st.info(f"📅 Вы выбрали: **{day_info['display']}** СЕГОДНЯ ({selected_date_display})")
@@ -600,7 +583,6 @@ def main():
             time_slots = day_info["time_slots"]
             slots_per_row = 5
             
-            # Разбиваем слоты на строки по 5 штук
             for row_idx in range(0, len(time_slots), slots_per_row):
                 row_slots = time_slots[row_idx:row_idx + slots_per_row]
                 cols = st.columns(len(row_slots))
@@ -619,11 +601,11 @@ def main():
                                 st.session_state.show_form = True
                                 st.rerun()
 
-            # Форма для записи 
+           
             if st.session_state.show_form and st.session_state.selected_time:
                 st.markdown(f"### Шаг 3: Заполните данные для записи на {st.session_state.selected_time}")
                 
-                # 🔥 ВЫБОР СТАТУСА с обновлением через session_state
+               
                 user_type = st.radio(
                     "Выберите ваш статус",
                     ["🎓 Студент", "📚 Абитуриент"],
@@ -631,7 +613,7 @@ def main():
                     key="user_type_radio"
                 )
                 
-                # Сохраняем в session_state для использования в форме
+               
                 st.session_state.user_type = user_type
                 
                 with st.form("appointment_form"):
@@ -640,14 +622,14 @@ def main():
                                           placeholder="example@mail.ru",
                                           help="На этот email придет подтверждение записи")
                     
-                    # 👇👇👇 УСЛОВНОЕ ОТОБРАЖЕНИЕ ПОЛЕЙ через session_state 👇👇👇
+                  
                     dormitory = None
                     room = None
                     
                     if st.session_state.user_type == "🎓 Студент":
                         dormitory = st.selectbox("Выберите общежитие", DORMITORIES)
                         room = st.text_input("Номер блока/комнаты", placeholder="Например: 101")
-                    else:  # Абитуриент
+                    else: 
                         st.markdown("")
                     
                     type_map = {
@@ -666,12 +648,10 @@ def main():
                     submitted = st.form_submit_button("✅ Подтвердить запись")
                     
                     if submitted:
-                        # Проверяем обязательные поля
                         if not fio or not email or not description:
                             st.error("❌ Пожалуйста, заполните все обязательные поля")
                         elif not validate_email(email):
                             st.error("❌ Пожалуйста, введите корректный email адрес")
-                        # Для студента проверяем общежитие и комнату
                         elif st.session_state.user_type == "🎓 Студент" and (not dormitory or not room):
                             st.error("❌ Для студентов обязательны поля 'Общежитие' и 'Комната'")
                         else:
@@ -735,9 +715,7 @@ def main():
                     if user_appointments:
                         st.success(f"Найдено {len(user_appointments)} записей")
                         
-                        # Создаем DataFrame для отображения
                         df = pd.DataFrame(user_appointments)
-                        # Добавляем поле user_type, если его нет
                         if 'user_type' not in df.columns:
                             df['user_type'] = 'Студент'
                         df_display = df[['id', 'date', 'time', 'user_type', 'issue_type', 'dormitory', 'room', 'status', 'description']]
@@ -764,7 +742,6 @@ def main():
                             if success:
                                 st.success(f"✅ {message}")
                                 st.balloons()
-                                # Отправляем уведомление работникам об удалении
                                 notification_body = f"Запись №{appointment_id_int} была удалена пользователем {delete_email}"
                                 for worker_email in WORKER_EMAILS:
                                     send_email(worker_email, f"🗑️ Запись №{appointment_id_int} удалена", notification_body)
