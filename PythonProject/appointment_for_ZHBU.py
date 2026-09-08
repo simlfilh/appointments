@@ -20,8 +20,6 @@ SUPABASE_KEY = st.secrets["SUPABASE_KEY"]
 SMTP_EMAIL = st.secrets["SMTP_EMAIL"]
 SMTP_PASSWORD = st.secrets["SMTP_PASSWORD"]
 
-PASSWORD = "admin123"
-
 SCHEDULE = {
     "Monday": {"start": "14:00", "end": "16:30", "slot_minutes": 10, "name": "Понедельник"},
     "Tuesday": {"start": "14:00", "end": "16:30", "slot_minutes": 10, "name": "Вторник"},
