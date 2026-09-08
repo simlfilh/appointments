@@ -60,19 +60,15 @@ def update_appointment_status(appointment_id, new_status):
         return None
 
 def delete_appointment(appointment_id):
-    """Удаление записи по ID"""
     try:
         supabase = get_supabase()
         
-        # Получаем данные записи перед удалением для уведомления
         response = supabase.table('appointments').select('*').eq('id', appointment_id).execute()
         if response.data:
             appointment_data = response.data[0]
             
-            # Удаляем запись
             supabase.table('appointments').delete().eq('id', appointment_id).execute()
             
-            # Отправляем уведомление работникам
             send_deletion_notification_to_workers(appointment_data)
             
             return True, f"Запись №{appointment_id} успешно удалена"
@@ -82,7 +78,6 @@ def delete_appointment(appointment_id):
         return False, f"Ошибка при удалении: {str(e)}"
 
 def send_deletion_notification_to_workers(appointment_data):
-    """Отправка уведомления работникам об удалении записи"""
     subject = f"🗑️ ЗАПИСЬ №{appointment_data['id']} УДАЛЕНА"
     body = f"""
 Была удалена следующая запись на прием:
@@ -157,9 +152,7 @@ def send_status_notification(student_email, student_name, appointment_id, date, 
 def to_excel(df):
     output = BytesIO()
     
-    # Создаем копию DataFrame без столбцов, которые не нужны в Excel
     df_to_export = df.copy()
-    # Удаляем столбец "Выбрать", если он есть
     if 'Выбрать' in df_to_export.columns:
         df_to_export = df_to_export.drop(columns=['Выбрать'])
     
@@ -171,7 +164,6 @@ def to_excel(df):
         
         from openpyxl.styles import Alignment
         
-        # Автоматически определяем ширину столбцов
         for column in worksheet.columns:
             max_length = 0
             column_letter = column[0].column_letter
@@ -186,7 +178,6 @@ def to_excel(df):
             adjusted_width = min(max_length + 2, 60)
             worksheet.column_dimensions[column_letter].width = adjusted_width
         
-        # Автоматическая высота строк
         for row_idx in range(2, worksheet.max_row + 1):
             max_height = 25
             for col_letter in worksheet.column_dimensions:
@@ -201,7 +192,6 @@ def to_excel(df):
                         max_height = min(height_needed, 150)
             worksheet.row_dimensions[row_idx].height = max_height
         
-        # Выравнивание для всех ячеек
         for row in worksheet.iter_rows():
             for cell in row:
                 cell.alignment = Alignment(
@@ -215,21 +205,17 @@ def to_excel(df):
     return output.getvalue()
 
 def safe_format_date(date_value):
-    """Безопасное форматирование даты"""
     if pd.isna(date_value) or date_value is None or date_value == '':
         return 'Не указана'
     
     try:
-        # Если это уже строка в формате YYYY-MM-DD
         if isinstance(date_value, str) and len(date_value) == 10 and date_value[4] == '-' and date_value[7] == '-':
             dt = datetime.strptime(date_value, '%Y-%m-%d')
             return dt.strftime('%d.%m.%Y')
         
-        # Если это datetime объект
         if isinstance(date_value, (datetime, pd.Timestamp)):
             return date_value.strftime('%d.%m.%Y')
         
-        # Пробуем парсить как есть
         dt = pd.to_datetime(date_value)
         return dt.strftime('%d.%m.%Y')
     except:
@@ -287,7 +273,6 @@ def main():
         st.info("Пока нет ни одной записи")
         return
     
-    # Подготовка данных для отображения
     display_df = appointments_df.rename(columns={
         "id": "ID",
         "date": "Дата",
@@ -301,21 +286,17 @@ def main():
         "status": "Статус"
     })
     
-    # Добавляем колонку "Тип", если есть user_type
     if 'user_type' in display_df.columns:
         display_df = display_df.rename(columns={"user_type": "Тип"})
         display_df["Тип"] = display_df["Тип"].fillna("Студент")
     else:
         display_df["Тип"] = "Студент"
     
-    # Заполняем пустые значения
     display_df["Общежитие"] = display_df["Общежитие"].fillna("Не указано")
     display_df["Комната"] = display_df["Комната"].fillna("Не указана")
     
-    # 🔥 БЕЗОПАСНОЕ ФОРМАТИРОВАНИЕ ДАТЫ
     display_df["Дата"] = display_df["Дата"].apply(safe_format_date)
     
-    # Фильтры
     st.subheader("🔍 Фильтры")
     col1, col2, col3, col4 = st.columns(4)
     with col1:
@@ -330,7 +311,6 @@ def main():
         user_type_options = ["Все", "Студент", "Абитуриент"] if 'Тип' in display_df.columns else ["Все"]
         user_type_filter = st.selectbox("Фильтр по типу", user_type_options)
     
-    # Применяем фильтры
     filtered_df = display_df.copy()
     
     today = datetime.now().date()
@@ -352,7 +332,6 @@ def main():
     if user_type_filter != "Все" and 'Тип' in filtered_df.columns:
         filtered_df = filtered_df[filtered_df["Тип"] == user_type_filter]
     
-    # Метрики
     col1, col2, col3, col4, col5 = st.columns(5)
     with col1:
         st.metric("Всего в фильтре", len(filtered_df))
@@ -373,9 +352,7 @@ def main():
     
     st.markdown("---")
     
-    # Создаем редактируемую таблицу
     if not filtered_df.empty:
-        # Добавляем чекбоксы для выбора
         checkbox_key = "appointments_checkbox_state"
         
         if checkbox_key not in st.session_state:
@@ -384,14 +361,12 @@ def main():
         edit_df = filtered_df.copy()
         edit_df = edit_df.reset_index(drop=True)
         
-        # Получаем значения чекбоксов
         checkbox_values = []
         for i in range(len(edit_df)):
             checkbox_values.append(st.session_state[checkbox_key].get(i, False))
         
         edit_df.insert(0, "Выбрать", checkbox_values)
         
-        # Настройка колонок для редактора
         column_config = {
             "Выбрать": st.column_config.CheckboxColumn(
                 "Выбрать",
@@ -410,11 +385,9 @@ def main():
             "Описание": st.column_config.TextColumn("Описание", width="large"),
         }
         
-        # Добавляем колонку "Тип" если она есть
         if 'Тип' in edit_df.columns:
             column_config["Тип"] = st.column_config.TextColumn("Тип", width="small")
         
-        # Отображаем редактор
         edited_df = st.data_editor(
             edit_df,
             use_container_width=True,
@@ -424,11 +397,9 @@ def main():
             key="appointments_data_editor"
         )
         
-        # Сохраняем состояние чекбоксов
         for i in range(len(edited_df)):
             st.session_state[checkbox_key][i] = edited_df.loc[i, "Выбрать"]
         
-        # Получаем выбранные ID
         selected_ids = []
         for i in range(len(edited_df)):
             if edited_df.loc[i, "Выбрать"]:
@@ -477,7 +448,6 @@ def main():
                                 success_count += 1
                         if success_count > 0:
                             st.success(f"✅ Статус изменен для {success_count} записей")
-                            # Сбрасываем чекбоксы
                             for i in range(len(edit_df)):
                                 st.session_state[checkbox_key][i] = False
                             time.sleep(1)
@@ -493,7 +463,6 @@ def main():
                     st.session_state.show_bulk_delete_confirm = True
                     st.session_state.bulk_delete_ids = selected_ids
         
-            # Диалог подтверждения массового удаления
             if st.session_state.show_bulk_delete_confirm:
                 with st.container():
                     st.warning(f"⚠️ Вы уверены, что хотите удалить {len(st.session_state.bulk_delete_ids)} записей? Это действие невозможно отменить.")
@@ -511,7 +480,6 @@ def main():
                                 st.success(f"✅ Удалено записей: {success_count}")
                                 st.session_state.show_bulk_delete_confirm = False
                                 st.session_state.bulk_delete_ids = []
-                                # Сбрасываем чекбоксы
                                 for i in range(len(edit_df)):
                                     st.session_state[checkbox_key][i] = False
                                 time.sleep(1)
