@@ -19,6 +19,7 @@ SUPABASE_URL = st.secrets["SUPABASE_URL"]
 SUPABASE_KEY = st.secrets["SUPABASE_KEY"]
 SMTP_EMAIL = st.secrets["SMTP_EMAIL"]
 SMTP_PASSWORD = st.secrets["SMTP_PASSWORD"]
+PASSWORD = st.secrets["PASSWORD"]
 
 SCHEDULE = {
     "Monday": {"start": "14:00", "end": "16:30", "slot_minutes": 10, "name": "Понедельник"},
@@ -244,7 +245,7 @@ def main():
             submitted = st.form_submit_button("Войти")
 
             if submitted:
-                if password_input == SMTP_PASSWORD:
+                if password_input == PASSWORD:
                     st.session_state.authenticated = True
                     st.rerun()
                 else:
